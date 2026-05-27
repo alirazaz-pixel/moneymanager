@@ -781,9 +781,10 @@ function openEdit(idx){
   document.getElementById('e-nt').value=r.note||'';
   document.getElementById('edit-mo').style.display='flex';
 }
-function saveEdit(){
+async function saveEdit(){
   const idx=parseInt(document.getElementById('eidx').value);
-  DB[idx]={
+  const oldRec = DB[idx];
+  const newRec = {
     date:document.getElementById('e-dt').value,
     type:document.getElementById('e-tp').value,
     account:document.getElementById('e-ac').value,
@@ -792,12 +793,61 @@ function saveEdit(){
     amount:parseFloat(document.getElementById('e-am').value)||0,
     note:document.getElementById('e-nt').value.trim()
   };
-  closeMo();toast('Updated — reload from Sheets to sync');renderRecent();renderRecs(true);
+  DB[idx]=newRec;
+  closeMo();
+  renderRecent();renderRecs(true);
+  showSync('Updating Google Sheets...');
+  try {
+    // Delete old record
+    const delParams = new URLSearchParams({
+      action:'delete',
+      date:oldRec.date,
+      type:oldRec.type,
+      category:oldRec.category,
+      amount:oldRec.amount,
+      note:oldRec.note||''
+    });
+    await fetch(GS+'?'+delParams.toString());
+    // Add new record
+    await saveToSheets(newRec);
+    hideSync();
+    toast('Updated ✓');
+  } catch(e){
+    hideSync();
+    toast('Updated locally');
+  }
 }
-function delEntry(){
+async function delEntry(){
   const idx=parseInt(document.getElementById('eidx').value);
-  if(!confirm('Delete this entry?'))return;
-  DB.splice(idx,1);closeMo();toast('Deleted locally — reload Sheets to sync');renderRecent();renderRecs(true);
+  if(!confirm('Delete this entry permanently?'))return;
+  const rec = DB[idx];
+  DB.splice(idx,1);
+  closeMo();
+  renderRecent();renderRecs(true);
+  // Delete from Google Sheets by finding matching row
+  showSync('Deleting from Google Sheets...');
+  try {
+    const params = new URLSearchParams({
+      action:'delete',
+      date:rec.date,
+      type:rec.type,
+      category:rec.category,
+      amount:rec.amount,
+      note:rec.note||''
+    });
+    const res = await fetch(GS+'?'+params.toString());
+    const data = await res.json();
+    if(data.status==='ok'){
+      hideSync();
+      toast('Deleted ✓');
+    } else {
+      hideSync();
+      toast('Deleted locally — refresh to sync');
+    }
+  } catch(e){
+    hideSync();
+    toast('Deleted locally — refresh to sync');
+  }
 }
 
 // CATEGORIES
