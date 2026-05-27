@@ -365,7 +365,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 </div>
 
 <script>
-const GS = "https://script.google.com/macros/s/AKfycbwCHuioXKQgOCUI1pNMHqh2CmtBzoD5viCHgAiSKgd7Ye3aI-YbuhV7nqNSm-xMbstLiA/exec";
+const GS = "https://script.google.com/macros/s/AKfycbyeZVwPbuh_8NM2AryuKGrG3K_FVLKPVHo1Ezdwzds0mYOHo8_lmWD7A_hKW9ZC6kFxyg/exec";
 const CAT_SUB = {"Apps": ["Amazon Prime", "Apple Storage", "Cam Scanner", "Chat GPT", "Food Panda", "Google Drive", "HBO", "Linkedin", "Netflix", "Other", "Oura Ring", "Spotify", "YouTube"], "Ayisha": ["Car", "Other Expense", "Pocket Money"], "Bank Charges": ["ATM Charges", "Fee Charges", "Locker Charges"], "Car Expense": ["AC Filter", "AC Service", "Air Filter", "Alignment ", "Balancing ", "Battery", "Engine Oil", "Labor", "Lights", "Maintenance ", "Mats", "Number Plate", "Oil Filter", "Other", "Polish and Wax", "Repairing", "Shades", "Token Tax", "Tyre", "Washing", "Wipers"], "Car Installment": ["Swift"], "Careem": [], "Cigarettes": ["E-cigarettes ", "Regular "], "Club": ["Membership"], "Doctor": ["Family", "Kids", "Me"], "Eid": ["Bakra", "family", "others", "servants"], "Electricty Bill": [], "Electronics": ["Computer", "Computer Accessories", "Mobile", "Mobile Accessories", "Other"], "Extra Income": [], "Family": ["Food", "Other ", "Petrol"], "Family Trip": ["Food", "Gifts", "Hotel", "Other", "Petrol", "Tickets"], "Food": ["Family ", "Personal"], "Friends": ["Food", "Gifts", "Other"], "Fun ": ["Movies", "Other"], "GM": ["MFEE", "Other"], "Gift": ["Family", "Others", "Parents"], "Grocery": ["Milk", "Other"], "Household": ["AC Repair", "Air Conditioner (AC)", "Bulbs", "Cooler", "Electrician", "Fittings", "Geezer", "Other", "Paint", "Washroom"], "Kids": ["Birthdays ", "Cloths", "Other", "Qari Shb", "Reading Books ", "Toys"], "Medicine": ["Masks", "Medicines", "Tests"], "Mobile": ["Onic", "Telenor", "Ufone", "Zong"], "Office": ["Clients", "Food", "Other", "Peon"], "Other": [], "Parking": ["parking ", "toll"], "Personal": ["Cloths", "Dhobi", "Hair Cut", "Other ", "Personal Care"], "Petrol": ["High Octane", "Regular"], "Sadka": ["Random", "Sadka"], "Salary": [], "Sanitizer & Cleaner": [], "Savings": ["Personal"], "School Expense": ["Books & Stationary", "Canteen", "Other", "Uniform & Cloths"], "School Fee": ["Annaya", "Miraal"], "Servants": ["Asma", "Other"], "Zakat": []};
 let DB = [];
 let curType = 'Expense';
@@ -419,7 +419,15 @@ async function loadFromSheets(){
       const di=h.indexOf('Date'),ti=h.indexOf('Type'),ai=h.indexOf('Account');
       const ci=h.indexOf('Category'),si=h.indexOf('Subcategory'),mi=h.indexOf('Amount'),ni=h.indexOf('Note');
       DB=data.data.slice(1).map(r=>({
-        date:String(r[di]).substring(0,10),
+        date:(function(d){
+          if(!d) return '';
+          var s = String(d);
+          // Handle ISO timestamp: 2026-05-26T19:00:00.000Z
+          if(s.includes('T')) return s.substring(0,10);
+          // Handle date object stringified
+          if(s.length >= 10) return s.substring(0,10);
+          return '';
+        })(r[di]),
         type:String(r[ti]),
         account:String(r[ai]||'Cash'),
         category:String(r[ci]||''),
