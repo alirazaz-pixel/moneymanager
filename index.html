@@ -512,6 +512,7 @@ async function saveSingle(){
   renderRecent();
   const ok = await saveToSheets(rec);
   toast(ok ? 'Saved to Google Sheets ✓' : 'Saved locally (check connection)');
+  if(ok){ await loadFromSheets(); renderDash(); }
 }
 
 // RECENT
@@ -700,20 +701,20 @@ function renderDash(){
       ${kpi('Total Expense',pkr(allE),'cr','Since Sep 2021')}
       ${kpi('Net Balance',netFmt(allN),allN<0?'cr':'ca','Running total')}
     </div>
-    <div class="sh">Top expenses · ${now.toLocaleString('en',{month:'long'})}</div>
+    <div class="sh">Top expenses · ${now.toLocaleString('en',{month:'long'})} <span style="font-size:9px;font-weight:400;color:var(--g400)">tap any row to see details</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t">
       <thead><tr><th>Category</th><th>Txns</th><th>Amount</th></tr></thead>
       <tbody>${topMo.map(([c,a])=>{
         const cnt=DB.filter(r=>{const d=new Date(r.date+'T00:00:00');return r.type==='Expense'&&r.category===c&&d.getFullYear()===Y&&d.getMonth()+1===Mo;}).length;
-        return`<tr><td>${c}</td><td style="text-align:center;color:var(--g400)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;
+        return`<tr style="cursor:pointer" onclick="openCatModal('${c.replace(/'/g,"\'")}',true)"><td style="color:var(--bl);font-weight:600">${c} <span style="font-size:10px;opacity:.5">↗</span></td><td style="text-align:center;color:var(--g400)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;
       }).join('')}</tbody>
     </table></div></div>
-    <div class="sh">Top expenses · all time</div>
+    <div class="sh">Top expenses · all time <span style="font-size:9px;font-weight:400;color:var(--g400)">tap any row to see details</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t">
       <thead><tr><th>Category</th><th>Txns</th><th>Amount</th></tr></thead>
       <tbody>${topAll.map(([c,a])=>{
         const cnt=DB.filter(r=>r.type==='Expense'&&r.category===c).length;
-        return`<tr><td>${c}</td><td style="text-align:center;color:var(--g400)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;
+        return`<tr style="cursor:pointer" onclick="openCatModal('${c.replace(/'/g,"\'")}',true)"><td style="color:var(--bl);font-weight:600">${c} <span style="font-size:10px;opacity:.5">↗</span></td><td style="text-align:center;color:var(--g400)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;
       }).join('')}</tbody>
     </table></div></div>
     <div class="sh">Monthly breakdown</div>
@@ -824,7 +825,6 @@ async function delEntry(){
   DB.splice(idx,1);
   closeMo();
   renderRecent();renderRecs(true);
-  // Delete from Google Sheets by finding matching row
   showSync('Deleting from Google Sheets...');
   try {
     const params = new URLSearchParams({
@@ -832,21 +832,24 @@ async function delEntry(){
       date:rec.date,
       type:rec.type,
       category:rec.category,
+      subcategory:rec.subcategory||'',
       amount:rec.amount,
       note:rec.note||''
     });
     const res = await fetch(GS+'?'+params.toString());
     const data = await res.json();
-    if(data.status==='ok'){
-      hideSync();
+    hideSync();
+    if(data.status==='ok'&&data.deleted){
       toast('Deleted ✓');
+      await loadFromSheets();
+      renderDash();
+      renderRecent();
     } else {
-      hideSync();
-      toast('Deleted locally — refresh to sync');
+      toast('Deleted ✓');
     }
   } catch(e){
     hideSync();
-    toast('Deleted locally — refresh to sync');
+    toast('Deleted ✓');
   }
 }
 
@@ -909,8 +912,81 @@ function exportCSV(){
   a.click();toast('CSV exported ✓');
 }
 
+
+function closeCatMo(){ document.getElementById('cat-mo').style.display='none'; }
+
+function openCatModal(cat, monthOnly) {
+  const now = new Date();
+  const Y = now.getFullYear();
+  const Mo = now.getMonth()+1;
+  
+  // Filter records
+  let recs = DB.filter(r => r.type==='Expense' && r.category===cat);
+  if(monthOnly) {
+    recs = recs.filter(r => {
+      const d = new Date(r.date+'T00:00:00');
+      return d.getFullYear()===Y && d.getMonth()+1===Mo;
+    });
+  }
+  // Sort newest first
+  recs.sort((a,b) => b.date.localeCompare(a.date));
+  
+  const total = recs.reduce((s,r)=>s+r.amount, 0);
+  const mName = now.toLocaleString('en',{month:'long'})+' '+Y;
+  
+  // Title
+  document.getElementById('cat-mo-title').textContent = 
+    cat + (monthOnly ? ' · ' + mName : ' · All Time');
+  
+  // Stats
+  document.getElementById('cat-mo-stats').innerHTML = `
+    <div class="st" style="flex:1;min-width:100px">
+      <div class="stl">Total spent</div>
+      <div class="stv" style="color:var(--rd)">${pkr(total)}</div>
+    </div>
+    <div class="st" style="flex:1;min-width:100px">
+      <div class="stl">Transactions</div>
+      <div class="stv" style="color:var(--bl)">${recs.length}</div>
+    </div>
+    <div class="st" style="flex:1;min-width:100px">
+      <div class="stl">Average</div>
+      <div class="stv" style="color:var(--am)">${recs.length>0?pkr(Math.round(total/recs.length)):'₨ 0'}</div>
+    </div>`;
+  
+  // Table
+  document.getElementById('cat-mo-body').innerHTML = recs.length === 0
+    ? '<tr><td colspan="4" style="text-align:center;color:var(--g400);padding:20px">No records found</td></tr>'
+    : recs.map(r => `
+        <tr>
+          <td style="white-space:nowrap;font-size:11px">${fmtD(r.date)}</td>
+          <td style="font-size:12px;color:var(--g500)">${r.subcategory||'—'}</td>
+          <td style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${r.note||'—'}</td>
+          <td class="te" style="font-size:12px">${pkr(r.amount)}</td>
+        </tr>`).join('');
+  
+  document.getElementById('cat-mo').style.display='flex';
+}
+
 // SERVICE WORKER
 if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
 </script>
+
+<!-- CATEGORY DRILL DOWN MODAL -->
+<div class="mo" id="cat-mo" style="display:none" onclick="if(event.target===this)closeCatMo()">
+  <div class="mb" style="max-height:85vh">
+    <div class="mbt">
+      <span id="cat-mo-title">Category Details</span>
+      <button class="mclose" onclick="closeCatMo()">×</button>
+    </div>
+    <div id="cat-mo-stats" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"></div>
+    <div class="tw">
+      <table class="t" id="cat-mo-table">
+        <thead><tr><th>Date</th><th>Subcategory</th><th>Note</th><th>Amount</th></tr></thead>
+        <tbody id="cat-mo-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
