@@ -387,11 +387,19 @@ window.onload = () => {
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
-  // Show embedded data INSTANTLY — no waiting
-  renderDash();renderRecent();
-  document.getElementById('ld').classList.add('hide');
-  document.getElementById('ld').style.display='none';
-  // Quietly sync from Sheets in background
+  // Try localStorage first for instant load
+  const cached = localStorage.getItem('mm_db');
+  if(cached){
+    try{
+      DB = JSON.parse(cached);
+      renderDash();renderRecent();
+      // Hide loading instantly
+      document.getElementById('ld').classList.add('hide');
+      document.getElementById('ld').style.display='none';
+    }catch(e){}
+  }
+  // Then sync from Sheets in background
+  document.getElementById('lds').textContent='Syncing...';
   loadFromSheets(true);
   // Auto-refresh every 15 seconds
   startAutoRefresh();
@@ -422,6 +430,7 @@ async function loadFromSheets(silent=false){
   if(!silent) showSync('Loading from Google Sheets...');
   try{
     const res = await fetch(GS+'?action=read&t='+Date.now());
+    
     const data = await res.json();
     if(data.status==='ok'&&data.data&&data.data.length>1){
       const h=data.data[0];
@@ -438,14 +447,26 @@ async function loadFromSheets(silent=false){
       })).filter(r=>r.amount>0&&r.date&&r.date!=='undefine');
       newDB.sort((a,b)=>b.date.localeCompare(a.date));
       DB=newDB;
+      // Save to localStorage for instant next load
+      try{ localStorage.setItem('mm_db', JSON.stringify(DB)); }catch(e){}
       document.getElementById('rcount2').textContent=DB.length.toLocaleString()+' records';
       document.getElementById('lastsync').textContent=new Date().toLocaleTimeString();
       renderDash();renderRecent();
       if(!silent) toast('Updated ✓');
       else showUpdated();
     }
-  }catch(e){console.log('Sheets error:',e);}
+  }catch(e){
+    console.log('Sheets error:',e);
+    // On error show embedded data
+    renderDash();renderRecent();
+  }
   if(!silent) hideSync();
+  // Always hide loading screen after first load
+  const ld = document.getElementById('ld');
+  if(ld && !ld.classList.contains('hide')){
+    ld.classList.add('hide');
+    setTimeout(()=>ld.style.display='none',400);
+  }
 }
 
 // SAVE TO SHEETS
@@ -495,6 +516,7 @@ async function saveSingle(){
   renderRecent();renderDash();
   const ok=await saveToSheets(rec);
   toast(ok?'Saved ✓':'Saved locally');
+  try{ localStorage.setItem('mm_db', JSON.stringify(DB)); }catch(e){}
 }
 
 // RECENT
@@ -760,7 +782,14 @@ function getFiltered(){
 }
 function renderRecs(reset){
   if(reset)rOff=0;
-  const f=getFiltered().sort((a,b)=>b.date.localeCompare(a.date));const sl=f.slice(0,rOff+PG);
+  // Sort by date DESC — entries added later on same date appear first (DB index = insertion order)
+  const f=getFiltered().slice().sort((a,b)=>{
+    const dc=b.date.localeCompare(a.date);
+    if(dc!==0)return dc;
+    // Same date — use DB index (lower index = more recently added = first)
+    return DB.indexOf(a)-DB.indexOf(b);
+  });
+  const sl=f.slice(0,rOff+PG);
   const tI=f.filter(r=>r.type==='Income').reduce((s,r)=>s+r.amount,0);
   const tE=f.filter(r=>r.type==='Expense').reduce((s,r)=>s+r.amount,0);
   document.getElementById('rstats').innerHTML=`${f.length.toLocaleString()} records · <span style="color:var(--gn);font-weight:600">${pkr(tI)}</span> in · <span style="color:var(--rd);font-weight:600">${pkr(tE)}</span> out`;
@@ -816,6 +845,7 @@ async function delEntry(){
   if(!confirm('Delete this entry permanently?'))return;
   const rec=DB[idx];
   DB.splice(idx,1);
+  try{ localStorage.setItem('mm_db', JSON.stringify(DB)); }catch(e){}
   closeMo();renderRecent();renderDash();renderRecs(true);
   showSync('Deleting...');
   try{
