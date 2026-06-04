@@ -387,16 +387,13 @@ window.onload = () => {
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
-  // Show app immediately with embedded data
+  // Show embedded data INSTANTLY — no waiting
   renderDash();renderRecent();
-  setTimeout(()=>{
-    document.getElementById('ld').classList.add('hide');
-    setTimeout(()=>document.getElementById('ld').style.display='none',500);
-  },300);
-  // Then quietly load from Sheets in background
-  document.getElementById('lds').textContent='Syncing with Google Sheets...';
+  document.getElementById('ld').classList.add('hide');
+  document.getElementById('ld').style.display='none';
+  // Quietly sync from Sheets in background
   loadFromSheets(true);
-  // Auto-refresh every 30 seconds for cross-device sync
+  // Auto-refresh every 15 seconds
   startAutoRefresh();
 };
 
@@ -404,7 +401,7 @@ function setDates(){const t=today();['s-dt','m-dt','sp-dt'].forEach(id=>{const e
 
 function startAutoRefresh(){
   if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer = setInterval(()=>loadFromSheets(true), 30000);
+  autoRefreshTimer = setInterval(()=>loadFromSheets(true), 15000);
 }
 
 // NAV
@@ -763,7 +760,7 @@ function getFiltered(){
 }
 function renderRecs(reset){
   if(reset)rOff=0;
-  const f=getFiltered();const sl=f.slice(0,rOff+PG);
+  const f=getFiltered().sort((a,b)=>b.date.localeCompare(a.date));const sl=f.slice(0,rOff+PG);
   const tI=f.filter(r=>r.type==='Income').reduce((s,r)=>s+r.amount,0);
   const tE=f.filter(r=>r.type==='Expense').reduce((s,r)=>s+r.amount,0);
   document.getElementById('rstats').innerHTML=`${f.length.toLocaleString()} records · <span style="color:var(--gn);font-weight:600">${pkr(tI)}</span> in · <span style="color:var(--rd);font-weight:600">${pkr(tE)}</span> out`;
