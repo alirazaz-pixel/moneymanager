@@ -200,7 +200,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 </div>
 
 <nav class="nav">
-  <span class="logo"><span class="logo-ic">&#x1F4B0;</span>Money Manager<small>&#x20A8; PKR</small></span>
+  <span class="logo"><span class="logo-ic">&#x1F4B0;</span>Money Manager<small>₨ PKR</small></span>
   <button class="ntab on" onclick="go('dash',this)">Dashboard</button>
   <button class="ntab" onclick="go('entry',this)">+ Add</button>
   <button class="ntab" onclick="go('recs',this)">Records</button>
@@ -236,7 +236,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
         <div class="fl"><label>Subcategory</label><select id="s-sb"><option value="">Select...</option></select></div>
       </div>
       <div class="fg">
-        <div class="fl"><label>Amount (&#x20A8;)</label><input type="number" id="s-am" placeholder="0" min="0" inputmode="numeric"></div>
+        <div class="fl"><label>Amount (₨)</label><input type="number" id="s-am" placeholder="0" min="0" inputmode="numeric"></div>
         <div class="fl"><label>Note</label><input type="text" id="s-nt" placeholder="e.g. Aylanto..."></div>
       </div>
       <button class="btn bp bw" onclick="saveSingle()">&#10003; &nbsp;Save Entry</button>
@@ -251,7 +251,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
       </div>
       <div id="mrows"></div>
       <button class="btn bg bsm" onclick="addMR()" style="margin-top:6px">+ Add row</button>
-      <div class="mtbar"><span>Total:</span><span id="mtot">&#x20A8; 0</span></div>
+      <div class="mtbar"><span>Total:</span><span id="mtot">₨ 0</span></div>
       <button class="btn bp bw" onclick="saveMulti()">&#10003; &nbsp;Save all entries</button>
     </div>
   </div>
@@ -262,8 +262,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
         <div class="fl"><label>Total Cash</label><input type="number" id="sp-tot" placeholder="e.g. 10000" oninput="calcSp()" min="0" inputmode="numeric"></div>
       </div>
       <div class="spsi">
-        <div class="spst"><div class="spstl">Allocated</div><div class="spstv rd" id="sp-al">&#x20A8; 0</div></div>
-        <div class="spst"><div class="spstl">Remaining</div><div class="spstv gn" id="sp-rm">&#x20A8; 0</div></div>
+        <div class="spst"><div class="spstl">Allocated</div><div class="spstv rd" id="sp-al">₨ 0</div></div>
+        <div class="spst"><div class="spstl">Remaining</div><div class="spstv gn" id="sp-rm">₨ 0</div></div>
       </div>
       <div class="pb"><div class="pf" id="sp-pf"></div></div>
       <div id="sprows"></div>
@@ -378,8 +378,8 @@ const PG=60,filt={yr:'all',tp:'all'};
 const CC=['#00D68F','#FF4560','#FFB800','#4C8EFF','#A78BFA','#FF6B35','#00D9FF','#FF3CAC','#7FFF00','#FF9500'];
 let charts={};
 
-const pkr=n=>'&#x20A8;&#8239;'+Math.abs(n).toLocaleString('en-PK',{maximumFractionDigits:0});
-const netFmt=n=>n<0?'('+pkr(n)+')':n>0?'+'+pkr(n):'&#x20A8;&#8239;0';
+const pkr=n=>'₨ '+Math.abs(n).toLocaleString('en-PK',{maximumFractionDigits:0});
+const netFmt=n=>n<0?'('+pkr(n)+')':n>0?'+'+pkr(n):'₨ 0';
 const fmtD=d=>new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 const today=()=>new Date().toISOString().split('T')[0];
 
@@ -651,7 +651,7 @@ function renderDash(){
   // Render charts AFTER DOM is painted
   const gc='rgba(255,255,255,.04)',tc='#505050';
   const tt={backgroundColor:'#1C1C1C',titleColor:'#B0B0B0',bodyColor:'#F0F0F0',borderColor:'#333',borderWidth:1};
-  const yTk={color:tc,font:{family:'DM Sans',size:10},callback:v=>v>=100000?'&#x20A8;'+(v/100000).toFixed(0)+'L':'&#x20A8;'+(v/1000).toFixed(0)+'K'};
+  const yTk={color:tc,font:{family:'DM Sans',size:10},callback:v=>'₨'+v.toLocaleString('en-PK',{maximumFractionDigits:0})};
 
   requestAnimationFrame(()=>{
     // Line chart
@@ -668,7 +668,7 @@ function renderDash(){
         },
         options:{
           responsive:true,maintainAspectRatio:false,
-          plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' &#x20A8;'+ctx.raw.toLocaleString()}}},
+          plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' ₨'+ctx.raw.toLocaleString()}}},
           scales:{x:{grid:{color:gc},ticks:{color:tc,font:{family:'DM Sans',size:10}}},y:{grid:{color:gc},ticks:yTk}}
         }
       });
@@ -705,7 +705,7 @@ function renderDash(){
         },
         options:{
           responsive:true,maintainAspectRatio:false,cutout:'55%',
-          plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.label+': &#x20A8;'+ctx.raw.toLocaleString()}}}
+          plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.label+': ₨'+ctx.raw.toLocaleString()}}}
         }
       });
       // Legend
