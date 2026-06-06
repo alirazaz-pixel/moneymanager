@@ -658,21 +658,34 @@ function startRealtimeListener() {
 }
 
 window.onload = () => {
+  // FORCE hide loading screen after 1 second no matter what
+  setTimeout(()=>{
+    const ld=document.getElementById('ld');
+    if(ld){ld.classList.add('hide');ld.style.display='none';}
+  }, 1000);
+
   fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
-  // Load from localStorage instantly
+
+  // Load from localStorage or embedded instantly
   const cached = localStorage.getItem('mm_db');
   if(cached){try{const t=JSON.parse(cached);if(t.length>0)DB=t;}catch(e){}}
   if(DB.length===0) DB=EMBEDDED;
-  // Show data and hide loading screen IMMEDIATELY — never wait for Firebase
+
+  // Show immediately
   renderDash();renderRecent();
+
+  // Hide loading now
   const ld=document.getElementById('ld');
   ld.classList.add('hide');
   ld.style.display='none';
-  // Try Firebase in background — if quota exceeded, app still works
-  try{startRealtimeListener();}catch(e){console.log('Firebase offline:',e);}
+
+  // Firebase in background — errors ignored
+  setTimeout(()=>{
+    try{startRealtimeListener();}catch(e){console.log('Firebase:',e);}
+  }, 500);
 };
 function setDates(){const t=today();['s-dt','m-dt','sp-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=t;});}
 
