@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Import Missing Records</title>
+<style>
+body{font-family:sans-serif;background:#0A0A0A;color:#F0F0F0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px}
+.card{background:#141414;border:1px solid #272727;border-radius:14px;padding:30px;max-width:500px;width:100%;text-align:center}
+h2{color:#00D68F;margin-bottom:8px}
+p{color:#707070;font-size:13px;margin-bottom:20px}
+button{background:linear-gradient(135deg,#00D68F,#00A870);color:#000;border:none;padding:14px 30px;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+button:disabled{opacity:.5;cursor:not-allowed}
+.progress{margin-top:16px;display:none}
+.bar-wrap{height:8px;background:#272727;border-radius:4px;overflow:hidden;margin:10px 0}
+.bar{height:100%;background:#00D68F;width:0%;transition:width .3s;border-radius:4px}
+.msg{font-size:13px;color:#FFB800}
+.done{color:#00D68F;font-size:15px;font-weight:700;margin-top:12px;display:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>Import Missing Records</h2>
+  <p>41 records from May 26 to June 5, 2026 need to be added to Firebase</p>
+  <button id="btn" onclick="importNow()">Import 41 Missing Records</button>
+  <div class="progress" id="prog">
+    <div class="bar-wrap"><div class="bar" id="bar"></div></div>
+    <div class="msg" id="msg">Importing...</div>
+  </div>
+  <div class="done" id="done">All 41 records imported successfully! ✓<br><br>You can close this tab now.</div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyBq3zzTscJrRUdqdcQWSdzIdRZW211agI0",
+  authDomain: "moneymanager-11180.firebaseapp.com",
+  projectId: "moneymanager-11180",
+  storageBucket: "moneymanager-11180.firebasestorage.app",
+  messagingSenderId: "951642852264",
+  appId: "1:951642852264:web:233e9a7963ebb16f23ab9d"
+});
+const db = getFirestore(app);
+const RECORDS = [{"date": "2026-05-26", "type": "Expense", "account": "Cash", "category": "Car Expense", "subcategory": "Washing", "amount": 600.0, "note": ""}, {"date": "2026-05-26", "type": "Expense", "account": "Cash", "category": "Food", "subcategory": "Family", "amount": 3075.0, "note": "McDonalds"}, {"date": "2026-05-26", "type": "Expense", "account": "Cash", "category": "Petrol", "subcategory": "Regular", "amount": 7000.0, "note": "MG"}, {"date": "2026-05-26", "type": "Expense", "account": "Cash", "category": "Sadka", "subcategory": "Random", "amount": 300.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Apps", "subcategory": "Oura Ring", "amount": 3000.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Apps", "subcategory": "Google Drive", "amount": 6500.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Food", "subcategory": "Family", "amount": 3400.0, "note": "double shot"}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Parking", "subcategory": "parking", "amount": 100.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Parking", "subcategory": "toll", "amount": 200.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Eid", "subcategory": "servants", "amount": 4000.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Bank Charges", "subcategory": "ATM Charges", "amount": 150.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Bank Charges", "subcategory": "ATM Charges", "amount": 1000.0, "note": "cash withdrawal"}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Parking", "subcategory": "toll", "amount": 100.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Sadka", "subcategory": "Sadka", "amount": 200.0, "note": ""}, {"date": "2026-05-28", "type": "Expense", "account": "Cash", "category": "Parking", "subcategory": "toll", "amount": 400.0, "note": ""}, {"date": "2026-06-04", "type": "Income", "account": "Cash", "category": "Salary", "subcategory": "", "amount": 1845732.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Savings", "subcategory": "Personal", "amount": 731478.0, "note": "June 2026 Savings"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "GM", "subcategory": "MFEE", "amount": 170000.0, "note": "Mfee Sharing"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Car Installment", "subcategory": "Swift", "amount": 103500.0, "note": "2026-06-01 00:00:00"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Car Expense", "subcategory": "Other", "amount": 150000.0, "note": "MG Expense (Edit Accordingly)"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Other", "subcategory": "", "amount": 79754.0, "note": "May 2026 Adjustment"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Electronics", "subcategory": "Other", "amount": 111000.0, "note": "Samsung Watch Ultra"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Bank Charges", "subcategory": "Fee Charges", "amount": 20000.0, "note": "HBL Ready Line"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Bank Charges", "subcategory": "Fee Charges", "amount": 40000.0, "note": "Silk Bank Ready Line"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Food", "subcategory": "Personal", "amount": 870.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Food", "subcategory": "Family", "amount": 7284.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Personal", "subcategory": "Hair Cut", "amount": 4675.0, "note": "Ngents"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Car Expense", "subcategory": "Washing", "amount": 800.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Petrol", "subcategory": "Regular", "amount": 5186.0, "note": "MG"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Kids", "subcategory": "Reading Books", "amount": 2455.0, "note": "Readings"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Personal", "subcategory": "Other", "amount": 2000.0, "note": "Daraz"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Office", "subcategory": "Peon", "amount": 200.0, "note": "Mohsin"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Kids", "subcategory": "Qari Shb", "amount": 8000.0, "note": "2026-06-01 00:00:00"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Servants", "subcategory": "Asma", "amount": 2500.0, "note": "2026-06-01 00:00:00"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Mobile", "subcategory": "Ufone", "amount": 1500.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Mobile", "subcategory": "Telenor", "amount": 800.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Household", "subcategory": "Other", "amount": 1500.0, "note": "Waseem Wapda"}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Family", "subcategory": "Other", "amount": 1239.0, "note": "Rayyan"}, {"date": "2026-06-05", "type": "Expense", "account": "Cash", "category": "Careem", "subcategory": "", "amount": 1000.0, "note": ""}, {"date": "2026-06-04", "type": "Expense", "account": "Cash", "category": "Cigarettes", "subcategory": "Regular", "amount": 3200.0, "note": ""}, {"date": "2026-06-05", "type": "Expense", "account": "Cash", "category": "Electronics", "subcategory": "Other", "amount": 800.0, "note": "Annaya Watch Battery Replacement"}];
+
+window.importNow = async function() {
+  document.getElementById('btn').disabled = true;
+  document.getElementById('prog').style.display = 'block';
+  let done = 0;
+  for(const r of RECORDS) {
+    await addDoc(collection(db,'transactions'), r);
+    done++;
+    const pct = Math.round(done/RECORDS.length*100);
+    document.getElementById('bar').style.width = pct+'%';
+    document.getElementById('msg').textContent = 'Imported '+done+' of '+RECORDS.length+' records...';
+  }
+  document.getElementById('msg').style.display = 'none';
+  document.getElementById('done').style.display = 'block';
+};
+</script>
+</body>
+</html>
