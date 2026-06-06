@@ -141,6 +141,13 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .calc-btn{width:36px;height:36px;background:var(--bg3);border:1.5px solid var(--bdr2);border-radius:var(--rsm);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--g3);cursor:pointer;flex-shrink:0;transition:all .15s}
 .calc-btn:hover{border-color:var(--gn);color:var(--gn)}
 .calc-preview{font-size:11px;color:var(--gn);font-weight:600;height:14px;margin-top:2px}
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--rsm);box-shadow:var(--shmd);z-index:150;max-height:180px;overflow-y:auto;display:none}
+.autocomplete-list.show{display:block}
+.autocomplete-item{padding:9px 12px;font-size:13px;color:var(--g1);cursor:pointer;border-bottom:1px solid var(--bdr)}
+.autocomplete-item:last-child{border:none}
+.autocomplete-item:hover,.autocomplete-item.active{background:var(--gn-lt);color:var(--gn)}
+.autocomplete-item span{color:var(--gn);font-weight:700}
 
 /* MINI CALCULATOR */
 .calc-popup{position:fixed;z-index:300;background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--r);box-shadow:var(--shmd);padding:12px;width:220px;display:none}
@@ -325,7 +332,12 @@ button,input,select{font-family:var(--f);cursor:pointer}
           </div>
           <div class="calc-preview" id="s-am-prev"></div>
         </div>
-        <div class="fl"><label>Note</label><input type="text" id="s-nt" placeholder="e.g. Aylanto..."></div>
+        <div class="fl autocomplete-wrap">
+          <label>Note</label>
+          <input type="text" id="s-nt" placeholder="e.g. Aylanto..." autocomplete="off"
+            oninput="acInput(this,'s-nt-list')" onkeydown="acKey(event,'s-nt-list')" onblur="setTimeout(()=>acHide('s-nt-list'),200)">
+          <div class="autocomplete-list" id="s-nt-list"></div>
+        </div>
       </div>
       <button class="btn bp bw" onclick="saveSingle()">&#10003; &nbsp;Save Entry</button>
     </div>
@@ -458,7 +470,14 @@ button,input,select{font-family:var(--f);cursor:pointer}
       <div class="fl"><label>Category</label><select id="e-ct" onchange="fillSubs('e-sb',this.value)"><option value="">Select...</option></select></div>
       <div class="fl"><label>Subcategory</label><select id="e-sb"><option value="">Select...</option></select></div>
     </div>
-    <div class="fg x1" style="margin-bottom:0"><div class="fl"><label>Note</label><input type="text" id="e-nt"></div></div>
+    <div class="fg x1" style="margin-bottom:0">
+      <div class="fl autocomplete-wrap">
+        <label>Note</label>
+        <input type="text" id="e-nt" autocomplete="off"
+          oninput="acInput(this,'e-nt-list')" onkeydown="acKey(event,'e-nt-list')" onblur="setTimeout(()=>acHide('e-nt-list'),200)">
+        <div class="autocomplete-list" id="e-nt-list"></div>
+      </div>
+    </div>
     <div class="ma">
       <button class="btn bg" onclick="closeMo()">Cancel</button>
       <button class="btn bd bsm" onclick="delEntry()" style="flex:0;padding:11px 16px">Delete</button>
@@ -874,7 +893,29 @@ function renderDash(){
 
     <div class="sh"><span>Account balances</span></div>
     <div class="acc-grid">
-      ${accounts.map(a=>{const bal=accBals[a];return`<div class="acc-card"><div class="acc-icon">${accIcons[a]}</div><div class="acc-name">${a}</div><div class="acc-bal ${bal>=0?'gn':'rd'}">${netFmt(bal)}</div></div>`;}).join('')}
+      ${accounts.map(a=>{
+        const bal=accBals[a];
+        const balMo=accBalsMo[a];
+        if(a==='Cash'){
+          // Cash: show this month only
+          return`<div class="acc-card">
+            <div class="acc-icon">${accIcons[a]}</div>
+            <div class="acc-name">${a}</div>
+            <div class="acc-bal ${balMo>=0?'gn':'rd'}">${netFmt(balMo)}</div>
+            <div style="font-size:9px;color:var(--g4);margin-top:2px">This month</div>
+          </div>`;
+        } else {
+          // Bank & CC: show both
+          return`<div class="acc-card">
+            <div class="acc-icon">${accIcons[a]}</div>
+            <div class="acc-name">${a}</div>
+            <div class="acc-bal ${bal>=0?'gn':'rd'}" style="font-size:12px">${netFmt(bal)}</div>
+            <div style="font-size:9px;color:var(--g4);margin-top:1px">All time</div>
+            <div style="font-size:11px;font-weight:600;margin-top:4px;color:${balMo>=0?'var(--gn)':'var(--rd)'}">${netFmt(balMo)}</div>
+            <div style="font-size:9px;color:var(--g4)">This month</div>
+          </div>`;
+        }
+      }).join('')}
     </div>
 
     <div class="sh"><span>This week &middot; ${weekDays[0]}-${weekDays[6]}</span><span class="sh-hint">${wkDiff===0?'same as last week':wkDiff>0?'&#9650; '+Math.abs(wkDiff)+'% vs last week':'&#9660; '+Math.abs(wkDiff)+'% vs last week'}</span></div>
@@ -1031,6 +1072,62 @@ window.renameCat=function(cat){const n=prompt('Rename "'+cat+'" to:',cat);if(!n|
 function mPrev(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;const p=document.getElementById('mprev');if(f&&i&&f!==i){const fc=DB.filter(r=>r.category===f).length,ic=DB.filter(r=>r.category===i).length;p.style.display='block';p.innerHTML=`<strong>${fc}</strong> records from <strong>${f}</strong> &rarr; <strong>${i}</strong> (${ic} records)`;}else p.style.display='none';}
 window.mergeCats=function(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;if(!f||!i||f===i){toast('Select two different categories');return;}DB.forEach(r=>{if(r.category===f)r.category=i;});if(CAT_SUB[f]){CAT_SUB[i]=[...new Set([...(CAT_SUB[i]||[]),...CAT_SUB[f]])].sort();delete CAT_SUB[f];}toast('"'+f+'" merged ✓');renderCats();fillCatSel('s-ct');fillCatSel('mf');fillCatSel('mi');};
 window.addCat=function(){const n=document.getElementById('newcat').value.trim();if(!n){toast('Enter a name');return;}if(CAT_SUB[n]){toast('Already exists');return;}CAT_SUB[n]=[];fillCatSel('s-ct');fillCatSel('e-ct');document.getElementById('newcat').value='';toast('"'+n+'" added ✓');renderCats();};
+// AUTOCOMPLETE
+function acInput(input, listId) {
+  const q = input.value.trim().toLowerCase();
+  const list = document.getElementById(listId);
+  if(!q || q.length < 1) { list.classList.remove('show'); return; }
+  // Get unique notes from DB that match
+  const notes = [...new Set(DB.map(r=>r.note).filter(n=>n&&n.toLowerCase().includes(q)))]
+    .sort((a,b)=>{ // prioritize starts-with
+      const aStarts = a.toLowerCase().startsWith(q);
+      const bStarts = b.toLowerCase().startsWith(q);
+      if(aStarts&&!bStarts)return -1;
+      if(!aStarts&&bStarts)return 1;
+      return a.localeCompare(b);
+    }).slice(0,8);
+  if(!notes.length){ list.classList.remove('show'); return; }
+  // Highlight matching part
+  list.innerHTML = notes.map((n,i)=>{
+    const idx = n.toLowerCase().indexOf(q);
+    const highlighted = n.substring(0,idx)+'<span>'+n.substring(idx,idx+q.length)+'</span>'+n.substring(idx+q.length);
+    return `<div class="autocomplete-item" data-val="${n.replace(/"/g,'&quot;')}" onclick="acSelect(this,'${input.id}','${listId}')">${highlighted}</div>`;
+  }).join('');
+  list.classList.add('show');
+}
+function acSelect(item, inputId, listId) {
+  document.getElementById(inputId).value = item.dataset.val;
+  acHide(listId);
+}
+function acHide(listId) {
+  const list = document.getElementById(listId);
+  if(list) list.classList.remove('show');
+}
+function acKey(e, listId) {
+  const list = document.getElementById(listId);
+  if(!list.classList.contains('show')) return;
+  const items = list.querySelectorAll('.autocomplete-item');
+  const active = list.querySelector('.active');
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    const next = active?active.nextElementSibling:items[0];
+    if(active)active.classList.remove('active');
+    if(next)next.classList.add('active');
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    const prev = active?active.previousElementSibling:items[items.length-1];
+    if(active)active.classList.remove('active');
+    if(prev)prev.classList.add('active');
+  } else if(e.key==='Enter'&&active){
+    e.preventDefault();
+    const inputId = e.target.id;
+    document.getElementById(inputId).value = active.dataset.val;
+    acHide(listId);
+  } else if(e.key==='Escape'){
+    acHide(listId);
+  }
+}
+
 window.exportCSV=function(){const hdr='Date,Type,Account,Category,Subcategory,Amount,Note';const rows=DB.map(r=>[r.date,r.type,r.account,r.category,r.subcategory,r.amount,'"'+(r.note||'')+'"'].join(','));const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([hdr,...rows].join('\n'));a.download='MoneyManager_'+today()+'.csv';a.click();toast('CSV exported ✓');};
 </script>
 </body>
