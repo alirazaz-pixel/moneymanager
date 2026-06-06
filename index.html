@@ -665,14 +665,41 @@ window.fillSubs=function(id,cat){const s=document.getElementById(id);if(!s)retur
 window.setType=function(tp){curType=tp;document.getElementById('btn-e').className='ttb'+(tp==='Expense'?' e':'');document.getElementById('btn-i').className='ttb'+(tp==='Income'?' i':'');};
 
 window.saveSingle=async function(){
-  const dt=document.getElementById('s-dt').value,ac=document.getElementById('s-ac').value;
-  const ct=document.getElementById('s-ct').value,sb=document.getElementById('s-sb').value;
+  const dt=document.getElementById('s-dt').value;
   const am=getAmtVal('s-am'),nt=document.getElementById('s-nt').value.trim();
-  if(!dt||!ct||!am||am<=0){toast('Fill Date, Category and Amount');return;}
+  if(!dt||!am||am<=0){toast('Fill Date and Amount');return;}
+
+  if(curType==='Transfer'){
+    const fromAcc=document.getElementById('s-from').value;
+    const toAcc=document.getElementById('s-to').value;
+    if(fromAcc===toAcc){toast('From and To must be different');return;}
+    const expRec={date:dt,type:'Expense',account:fromAcc,category:'Transfer',subcategory:'To '+toAcc,amount:am,note:nt||'Transfer to '+toAcc};
+    const incRec={date:dt,type:'Income',account:toAcc,category:'Transfer',subcategory:'From '+fromAcc,amount:am,note:nt||'Transfer from '+fromAcc};
+    DB.unshift(expRec);DB.unshift(incRec);
+    try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+    renderRecent();renderDash();
+    document.getElementById('s-am').value='';document.getElementById('s-nt').value='';
+    toast('Transfer saved ✓');
+    await saveToFirebase(expRec);await saveToFirebase(incRec);
+    return;
+  }
+
+  const ac=document.getElementById('s-ac').value;
+  const ct=document.getElementById('s-ct').value,sb=document.getElementById('s-sb').value;
+  if(!ct){toast('Select a Category');return;}
   const rec={date:dt,type:curType,account:ac,category:ct,subcategory:sb,amount:am,note:nt};
-  const id=await saveToFirebase(rec);
-  if(id){document.getElementById('s-am').value='';document.getElementById('s-nt').value='';document.getElementById('s-am-prev').textContent='';toast('Saved ✓');}
-  else{DB.unshift(rec);try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}renderRecent();renderDash();toast('Saved locally');}
+
+  // Add to DB immediately so dashboard updates right away
+  DB.unshift(rec);
+  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+  document.getElementById('s-am').value='';
+  document.getElementById('s-nt').value='';
+  document.getElementById('s-am-prev').textContent='';
+  renderRecent();renderDash();
+  toast('Saved ✓');
+
+  // Save to Google Sheets in background
+  await saveToFirebase(rec);
 };
 
 function renderRecent(){
@@ -702,10 +729,16 @@ window.saveMulti=async function(){
   const dt=document.getElementById('m-dt').value,ac=document.getElementById('m-ac').value,recs=[];
   document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select'),ii=row.querySelectorAll('input');const ct=ss[0].value,sb=ss[1].value,am=getInputAmt(ii[0]),nt=ii[1].value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
-  showSync('Saving '+recs.length+' entries...');
-  for(const r of recs)await saveToFirebase(r);
-  hideSync();toast(recs.length+' entries saved ✓');
+  // Add to DB immediately
+  recs.forEach(r=>DB.unshift(r));
+  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+  renderDash();renderRecent();
   document.getElementById('mrows').innerHTML='';addMR();addMR();addMR();calcMT();
+  toast(recs.length+' entries saved ✓');
+  // Save to Google Sheets in background
+  showSync('Syncing to Sheets...');
+  for(const r of recs)await saveToFirebase(r);
+  hideSync();
 };
 window.addSR=function(){
   const d=document.createElement('div');d.className='sprow';
@@ -724,10 +757,16 @@ window.saveSplit=async function(){
   const dt=document.getElementById('sp-dt').value,recs=[];
   document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,ii=row.querySelectorAll('input'),nt=ii[0].value.trim(),am=parseFloat(ii[1].value);if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
-  showSync('Saving...');
-  for(const r of recs)await saveToFirebase(r);
-  hideSync();toast(recs.length+' split entries saved ✓');
+  // Add to DB immediately
+  recs.forEach(r=>DB.unshift(r));
+  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+  renderDash();renderRecent();
   document.getElementById('sprows').innerHTML='';document.getElementById('sp-tot').value='';addSR();addSR();addSR();calcSp();
+  toast(recs.length+' split entries saved ✓');
+  // Save to Google Sheets in background
+  showSync('Syncing to Sheets...');
+  for(const r of recs)await saveToFirebase(r);
+  hideSync();
 };
 
 function sumDB(tp,yr,mo){return DB.filter(r=>{if(tp&&r.type!==tp)return false;const d=new Date(r.date+'T00:00:00');if(yr&&d.getFullYear()!==yr)return false;if(mo&&d.getMonth()+1!==mo)return false;return true;}).reduce((s,r)=>s+r.amount,0);}
