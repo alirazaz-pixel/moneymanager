@@ -598,23 +598,7 @@ document.addEventListener('click', function(e) {
 });
 
 // FIREBASE REAL-TIME LISTENER (last 7 days only)
-function startRealtimeListener() {
-  const d = new Date(); d.setDate(d.getDate()-7);
-  const cutoff = d.toISOString().split('T')[0];
-  const q = query(collection(db,COL), where('date','>=',cutoff), orderBy('date','desc'));
-  onSnapshot(q, (snap) => {
-    const recent = snap.docs.map(d=>({...d.data(),_id:d.id}));
-    const old = DB.filter(r=>r.date<cutoff);
-    DB = [...recent,...old];
-    DB.sort((a,b)=>b.date.localeCompare(a.date));
-    try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
-    document.getElementById('rcount2').textContent = DB.length.toLocaleString()+' records';
-    document.getElementById('lastsync').textContent = new Date().toLocaleTimeString();
-    setFbStatus(true);
-    renderDash();renderRecent();
-    showUpdated();
-  }, err=>{console.log(err);setFbStatus(false);});
-}
+
 
 window.onload = () => {
   fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
@@ -626,7 +610,9 @@ window.onload = () => {
   if(DB.length===0) DB=EMBEDDED;
   renderDash();renderRecent();
   const ld=document.getElementById('ld');ld.classList.add('hide');ld.style.display='none';
-  startRealtimeListener();
+  // Start Google Sheets sync
+  syncFromSheets();
+  setInterval(syncFromSheets, 15000);
 };
 function setDates(){const t=today();['s-dt','m-dt','sp-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=t;});}
 
