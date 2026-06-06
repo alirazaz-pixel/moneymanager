@@ -70,7 +70,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .pie-container{display:grid;grid-template-columns:160px 1fr;gap:14px;align-items:center}
 .pie-legend{display:flex;flex-direction:column;gap:6px}
 .pl-row{display:flex;align-items:center;gap:7px;cursor:pointer;padding:2px 0}
-.pl-row:hover .pl-name{color:var(--g1)}
 .pl-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .pl-name{font-size:11px;color:var(--g2);flex:1}
 .pl-pct{font-size:10px;color:var(--g4);min-width:28px;text-align:right}
@@ -100,7 +99,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:var(--rsm);font-size:13px;font-weight:700;border:none;transition:all .15s;white-space:nowrap}
 .btn:active{transform:scale(.97)}
 .bp{background:linear-gradient(135deg,#00D68F,#00A870);color:#000;box-shadow:0 0 20px rgba(0,214,143,.2)}
-.bp:hover{box-shadow:0 0 28px rgba(0,214,143,.4)}
 .bs{background:linear-gradient(135deg,#4C8EFF,#2060DD);color:#fff}
 .bd{background:linear-gradient(135deg,#FF4560,#CC2040);color:#fff}
 .bg{background:none;border:1.5px solid var(--bdr2);color:var(--g2)}.bg:hover{border-color:var(--gn);color:var(--gn)}
@@ -177,9 +175,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 <div class="sbar" id="sbar"><div class="sdot"></div><span id="smsg">Saving...</span></div>
 <div class="sync-ind" id="sync-ind">&#8635; Synced</div>
 <div class="toast" id="toast"></div>
-
 <div class="page on" id="page-dash"><div id="dout"></div></div>
-
 <div class="page" id="page-entry">
   <div class="tabs">
     <button class="tab on" onclick="eTab('single',this)">Single</button>
@@ -239,7 +235,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
     </div>
   </div>
 </div>
-
 <div class="page" id="page-recs">
   <div class="sb2">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g4)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -258,7 +253,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
     <button class="btn bg bsm" id="morebtn" onclick="loadMore()" style="display:none">Load more</button>
   </div>
 </div>
-
 <div class="page" id="page-cats">
   <div class="card">
     <div class="tabs">
@@ -279,7 +273,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
     </div>
   </div>
 </div>
-
 <div class="page" id="page-cfg">
   <div class="card">
     <div class="ctit">Firebase Database</div>
@@ -290,7 +283,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
       </div>
     </div>
     <div style="padding:10px 0;border-bottom:1px solid var(--bdr)">
-      <div style="font-size:13px;font-weight:600;margin-bottom:3px">Records</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px">Records in memory</div>
       <div style="font-size:11px;color:var(--g4)" id="rcount2">Loading...</div>
     </div>
     <div style="padding:10px 0">
@@ -299,19 +292,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
     </div>
     <button class="btn bp bw" onclick="exportCSV()">&#128229; &nbsp;Export CSV (backup)</button>
   </div>
-  <div class="card">
-    <div class="ctit">Import historical data</div>
-    <div style="font-size:12px;color:var(--g3);margin-bottom:12px">Import your 7,634 records from the embedded data into Firebase. Only needed once.</div>
-    <div id="import-progress" style="display:none;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--am);margin-bottom:6px" id="import-msg">Importing...</div>
-      <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
-        <div id="import-bar" style="height:100%;background:var(--gn);border-radius:3px;width:0%;transition:width .3s"></div>
-      </div>
-    </div>
-    <button class="btn bs bw" id="import-btn" onclick="importToFirebase()">&#8593; &nbsp;Import all records to Firebase</button>
-  </div>
 </div>
-
 <div class="mo" id="edit-mo" style="display:none" onclick="if(event.target===this)closeMo()">
   <div class="mb">
     <div class="mbt">Edit entry<button class="mclose" onclick="closeMo()">&times;</button></div>
@@ -336,7 +317,6 @@ button,input,select{font-family:var(--f);cursor:pointer}
     </div>
   </div>
 </div>
-
 <div class="mo" id="cat-mo" style="display:none" onclick="if(event.target===this)closeCatMo()">
   <div class="mb" style="max-height:85vh">
     <div class="mbt"><span id="cat-mo-title">Category</span><button class="mclose" onclick="closeCatMo()">&times;</button></div>
@@ -350,7 +330,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, where, onSnapshot, Timestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBq3zzTscJrRUdqdcQWSdzIdRZW211agI0",
@@ -379,141 +359,82 @@ const fmtD = d => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-dig
 const today = () => new Date().toISOString().split('T')[0];
 
 function mkChart(id,cfg){if(charts[id]){charts[id].destroy();delete charts[id];}const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
-
 let tT;
 function toast(m,d=2400){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),d);}
 function showSync(m){document.getElementById('smsg').textContent=m;document.getElementById('sbar').classList.add('on');}
 function hideSync(){document.getElementById('sbar').classList.remove('on');}
 function showUpdated(){const el=document.getElementById('sync-ind');el.classList.add('on');setTimeout(()=>el.classList.remove('on'),2500);}
+function setFbStatus(ok){document.getElementById('fb-status').innerHTML=ok?'<span style="width:8px;height:8px;border-radius:50%;background:var(--gn);display:inline-block;margin-right:5px;vertical-align:middle;box-shadow:0 0 6px rgba(0,214,143,.6)"></span>Connected · Real-time sync active':'<span style="width:8px;height:8px;border-radius:50%;background:var(--rd);display:inline-block;margin-right:5px;vertical-align:middle"></span>Connection error';}
 
-function setFbStatus(connected){
-  document.getElementById('fb-status').innerHTML = connected
-    ? '<span style="width:8px;height:8px;border-radius:50%;background:var(--gn);display:inline-block;margin-right:5px;vertical-align:middle;box-shadow:0 0 6px rgba(0,214,143,.6)"></span>Connected to Firebase'
-    : '<span style="width:8px;height:8px;border-radius:50%;background:var(--rd);display:inline-block;margin-right:5px;vertical-align:middle"></span>Connection error';
-}
+// KEY FUNCTION: Listen ONLY to recent entries (last 7 days)
+// This uses almost zero reads — only syncs new entries in real time!
+function startRealtimeListener() {
+  // Listen for entries from last 7 days only
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const cutoff = sevenDaysAgo.toISOString().split('T')[0];
 
-// LOAD FROM FIREBASE
-async function loadFromFirebase() {
-  try {
-    const q = query(collection(db, COL), orderBy('date','desc'));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      DB = snap.docs.map(d => ({...d.data(), _id: d.id}));
-      try{localStorage.setItem('mm_db', JSON.stringify(DB));}catch(e){}
-      document.getElementById('rcount2').textContent = DB.length.toLocaleString() + ' records';
-      document.getElementById('lastsync').textContent = new Date().toLocaleTimeString();
-      setFbStatus(true);
-      renderDash(); renderRecent();
-      showUpdated();
-    } else {
-      // Firebase empty — use embedded data
-      DB = EMBEDDED;
-      setFbStatus(true);
-      document.getElementById('rcount2').textContent = '0 (import needed)';
-      renderDash(); renderRecent();
-    }
-  } catch(e) {
-    console.log('Firebase error:', e);
+  const q = query(
+    collection(db, COL),
+    where('date', '>=', cutoff),
+    orderBy('date', 'desc')
+  );
+
+  onSnapshot(q, (snap) => {
+    // Get recent records from Firebase (last 7 days only)
+    const recentFromFB = snap.docs.map(d => ({...d.data(), _id: d.id}));
+
+    // Merge with DB: keep all old records from localStorage/embedded
+    // Replace/add any recent records from Firebase
+    const oldRecords = DB.filter(r => r.date < cutoff);
+    
+    // Build merged DB: old records + fresh recent ones from Firebase
+    DB = [...recentFromFB, ...oldRecords];
+    DB.sort((a,b) => b.date.localeCompare(a.date));
+
+    // Save to localStorage
+    try{localStorage.setItem('mm_db', JSON.stringify(DB));}catch(e){}
+
+    document.getElementById('rcount2').textContent = DB.length.toLocaleString() + ' records';
+    document.getElementById('lastsync').textContent = new Date().toLocaleTimeString();
+    setFbStatus(true);
+    renderDash(); renderRecent();
+    showUpdated();
+  }, (err) => {
+    console.log('Listener error:', err);
     setFbStatus(false);
-  }
+  });
 }
 
-// SAVE TO FIREBASE
-async function saveToFirebase(rec) {
-  showSync('Saving...');
-  try {
-    const docRef = await addDoc(collection(db, COL), rec);
-    hideSync();
-    return docRef.id;
-  } catch(e) {
-    hideSync();
-    console.log('Save error:', e);
-    return null;
-  }
-}
-
-// DELETE FROM FIREBASE
-async function deleteFromFirebase(id) {
-  try {
-    await deleteDoc(doc(db, COL, id));
-    return true;
-  } catch(e) {
-    console.log('Delete error:', e);
-    return false;
-  }
-}
-
-// IMPORT ALL EMBEDDED RECORDS
-window.importToFirebase = async function() {
-  if(!confirm('Import all ' + EMBEDDED.length + ' records to Firebase? This may take a few minutes.')) return;
-  const btn = document.getElementById('import-btn');
-  btn.disabled = true;
-  document.getElementById('import-progress').style.display = 'block';
-  const total = EMBEDDED.length;
-  let done = 0;
-  const BATCH_SIZE = 500;
-
-  for(let i = 0; i < total; i += BATCH_SIZE) {
-    const batch = writeBatch(db);
-    const chunk = EMBEDDED.slice(i, i + BATCH_SIZE);
-    chunk.forEach(rec => {
-      const ref = doc(collection(db, COL));
-      batch.set(ref, {
-        date: rec.date,
-        type: rec.type,
-        account: rec.account || 'Cash',
-        category: rec.category,
-        subcategory: rec.subcategory || '',
-        amount: rec.amount,
-        note: rec.note || ''
-      });
-    });
-    await batch.commit();
-    done += chunk.length;
-    const pct = Math.round(done/total*100);
-    document.getElementById('import-bar').style.width = pct + '%';
-    document.getElementById('import-msg').textContent = 'Imported ' + done.toLocaleString() + ' of ' + total.toLocaleString() + ' records (' + pct + '%)';
-  }
-
-  document.getElementById('import-msg').textContent = 'Import complete! ' + total.toLocaleString() + ' records in Firebase ✓';
-  document.getElementById('import-msg').style.color = 'var(--gn)';
-  btn.textContent = 'Already imported ✓';
-  toast('Import complete! ' + total.toLocaleString() + ' records');
-  await loadFromFirebase();
-};
-
-window.onload = async () => {
+window.onload = () => {
   fillCatSel('s-ct'); fillCatSel('e-ct'); fillCatSel('mf'); fillCatSel('mi');
   setDates();
   document.getElementById('mf').addEventListener('change', mPrev);
   document.getElementById('mi').addEventListener('change', mPrev);
 
-  // Load from localStorage instantly
+  // Step 1: Load from localStorage instantly
   const cached = localStorage.getItem('mm_db');
   if(cached) {
     try {
       const tmp = JSON.parse(cached);
-      if(tmp.length > 0) {
-        DB = tmp;
-        renderDash(); renderRecent();
-      }
+      if(tmp.length > 0) DB = tmp;
     } catch(e) {}
   }
-  if(DB.length === 0) {
-    DB = EMBEDDED;
-    renderDash(); renderRecent();
-  }
 
-  // Hide loading screen
+  // Step 2: Fall back to embedded data if nothing cached
+  if(DB.length === 0) DB = EMBEDDED;
+
+  // Show data instantly
+  renderDash(); renderRecent();
+
+  // Hide loading screen immediately
   const ld = document.getElementById('ld');
   ld.classList.add('hide');
   ld.style.display = 'none';
 
-  // Load from Firebase in background
-  await loadFromFirebase();
-
-  // Auto refresh every 15 seconds
-  setInterval(loadFromFirebase, 15000);
+  // Step 3: Start real-time listener for recent entries only
+  // This uses VERY few reads — only syncs last 7 days
+  startRealtimeListener();
 };
 
 function setDates(){const t=today();['s-dt','m-dt','sp-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=t;});}
@@ -532,9 +453,21 @@ window.closeCatMo=()=>document.getElementById('cat-mo').style.display='none';
 window.clrS=()=>{document.getElementById('srch').value='';renderRecs(true);};
 window.loadMore=()=>renderRecs(false);
 
+async function saveToFirebase(rec){
+  showSync('Saving...');
+  try{
+    const docRef = await addDoc(collection(db,COL), rec);
+    hideSync();
+    return docRef.id;
+  }catch(e){hideSync();console.log(e);return null;}
+}
+
+async function deleteFromFirebase(id){
+  try{await deleteDoc(doc(db,COL,id));return true;}catch(e){return false;}
+}
+
 function fillCatSel(id){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';Object.keys(CAT_SUB).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});}
-function fillSubs(id,cat){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';(CAT_SUB[cat]||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});}
-window.fillSubs=fillSubs;
+window.fillSubs=function(id,cat){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';(CAT_SUB[cat]||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});};
 window.setType=function(tp){curType=tp;document.getElementById('btn-e').className='ttb'+(tp==='Expense'?' e':'');document.getElementById('btn-i').className='ttb'+(tp==='Income'?' i':'');};
 
 window.saveSingle = async function(){
@@ -543,18 +476,19 @@ window.saveSingle = async function(){
   const am=parseFloat(document.getElementById('s-am').value),nt=document.getElementById('s-nt').value.trim();
   if(!dt||!ct||!am||am<=0){toast('Fill Date, Category and Amount');return;}
   const rec={date:dt,type:curType,account:ac,category:ct,subcategory:sb,amount:am,note:nt};
-  showSync('Saving to Firebase...');
   const id = await saveToFirebase(rec);
   if(id){
-    rec._id = id;
-    DB.unshift(rec);
-    try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+    rec._id=id;
+    // Real-time listener will automatically update DB
     document.getElementById('s-am').value='';
     document.getElementById('s-nt').value='';
-    renderRecent();renderDash();
-    toast('Saved to Firebase ✓');
+    toast('Saved ✓');
   } else {
-    toast('Error saving — check connection');
+    // Offline fallback
+    DB.unshift(rec);
+    try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+    renderRecent();renderDash();
+    toast('Saved locally');
   }
 };
 
@@ -571,9 +505,7 @@ window.eTab=function(id,el){
   if(id==='multi'&&!document.getElementById('mrows').children.length){addMR();addMR();addMR();}
   if(id==='split'&&!document.getElementById('sprows').children.length){addSR();addSR();addSR();}
 };
-
 function xBtn(cls){return `<button onclick="this.closest('.${cls}').remove();${cls==='mr'?'calcMT':'calcSp'}()" style="background:rgba(255,69,96,.15);border:1px solid rgba(255,69,96,.25);border-radius:6px;color:var(--rd);font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;align-self:flex-end;flex-shrink:0">&times;</button>`;}
-
 window.addMR=function(){
   const d=document.createElement('div');d.className='mr';
   const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
@@ -582,18 +514,15 @@ window.addMR=function(){
 };
 window.mRowSub=function(sel){const sub=sel.closest('.mr').querySelector('.msub');sub.innerHTML='<option value="">&mdash;</option>';(CAT_SUB[sel.value]||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);});};
 window.calcMT=function(){let t=0;document.querySelectorAll('.mamt').forEach(i=>t+=parseFloat(i.value)||0);document.getElementById('mtot').textContent=pkr(t);};
-
 window.saveMulti=async function(){
   const dt=document.getElementById('m-dt').value,ac=document.getElementById('m-ac').value,recs=[];
   document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select'),ii=row.querySelectorAll('input');const ct=ss[0].value,sb=ss[1].value,am=parseFloat(ii[0].value),nt=ii[1].value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
   showSync('Saving '+recs.length+' entries...');
-  for(const r of recs){const id=await saveToFirebase(r);if(id){r._id=id;DB.unshift(r);}}
-  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
-  hideSync();renderDash();renderRecent();toast(recs.length+' entries saved ✓');
+  for(const r of recs)await saveToFirebase(r);
+  hideSync();toast(recs.length+' entries saved ✓');
   document.getElementById('mrows').innerHTML='';addMR();addMR();addMR();calcMT();
 };
-
 window.addSR=function(){
   const d=document.createElement('div');d.className='sprow';
   const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
@@ -612,9 +541,8 @@ window.saveSplit=async function(){
   document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,ii=row.querySelectorAll('input'),nt=ii[0].value.trim(),am=parseFloat(ii[1].value);if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
   showSync('Saving...');
-  for(const r of recs){const id=await saveToFirebase(r);if(id){r._id=id;DB.unshift(r);}}
-  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
-  hideSync();renderDash();renderRecent();toast(recs.length+' split entries saved ✓');
+  for(const r of recs)await saveToFirebase(r);
+  hideSync();toast(recs.length+' split entries saved ✓');
   document.getElementById('sprows').innerHTML='';document.getElementById('sp-tot').value='';addSR();addSR();addSR();calcSp();
 };
 
@@ -677,19 +605,16 @@ function renderDash(){
   const gc='rgba(255,255,255,.04)',tc='#505050';
   const tt={backgroundColor:'#1C1C1C',titleColor:'#B0B0B0',bodyColor:'#F0F0F0',borderColor:'#333',borderWidth:1};
   const yTk={color:tc,font:{family:'DM Sans',size:10},callback:v=>'₨'+v.toLocaleString('en-PK',{maximumFractionDigits:0})};
-
   requestAnimationFrame(()=>{
     const lineEl=document.getElementById('ch-line');
-    if(lineEl) mkChart('ch-line',{type:'line',data:{labels:Array.from({length:day},(_,i)=>i+1),datasets:[{data:dailyData,borderColor:'#FF4560',backgroundColor:'rgba(255,69,96,.07)',borderWidth:2,pointBackgroundColor:'#FF4560',pointRadius:3,tension:.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{color:gc},ticks:{color:tc,font:{family:'DM Sans',size:10}}},y:{grid:{color:gc},ticks:yTk}}}});
-
+    if(lineEl)mkChart('ch-line',{type:'line',data:{labels:Array.from({length:day},(_,i)=>i+1),datasets:[{data:dailyData,borderColor:'#FF4560',backgroundColor:'rgba(255,69,96,.07)',borderWidth:2,pointBackgroundColor:'#FF4560',pointRadius:3,tension:.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{color:gc},ticks:{color:tc,font:{family:'DM Sans',size:10}}},y:{grid:{color:gc},ticks:yTk}}}});
     const barEl=document.getElementById('ch-bar');
-    if(barEl) mkChart('ch-bar',{type:'bar',data:{labels:bar6.map(({y,m})=>new Date(y,m-1,1).toLocaleString('en',{month:'short'})),datasets:[{label:'Income',data:bar6.map(({y,m})=>sumDB('Income',y,m)),backgroundColor:'rgba(0,214,143,.7)',borderRadius:5,borderSkipped:false},{label:'Expense',data:bar6.map(({y,m})=>sumDB('Expense',y,m)),backgroundColor:'rgba(255,69,96,.7)',borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'#707070',font:{family:'DM Sans',size:11},boxWidth:10,padding:12}},tooltip:{...tt}},scales:{x:{grid:{display:false},ticks:{color:tc,font:{family:'DM Sans',size:11}}},y:{grid:{color:gc},ticks:yTk}}}});
-
+    if(barEl)mkChart('ch-bar',{type:'bar',data:{labels:bar6.map(({y,m})=>new Date(y,m-1,1).toLocaleString('en',{month:'short'})),datasets:[{label:'Income',data:bar6.map(({y,m})=>sumDB('Income',y,m)),backgroundColor:'rgba(0,214,143,.7)',borderRadius:5,borderSkipped:false},{label:'Expense',data:bar6.map(({y,m})=>sumDB('Expense',y,m)),backgroundColor:'rgba(255,69,96,.7)',borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'#707070',font:{family:'DM Sans',size:11},boxWidth:10,padding:12}},tooltip:{...tt}},scales:{x:{grid:{display:false},ticks:{color:tc,font:{family:'DM Sans',size:11}}},y:{grid:{color:gc},ticks:yTk}}}});
     const pieEl=document.getElementById('ch-pie');
     if(pieEl&&topMo.length>0){
       mkChart('ch-pie',{type:'doughnut',data:{labels:topMo.map(([c])=>c),datasets:[{data:topMo.map(([,a])=>a),backgroundColor:CC.slice(0,topMo.length),borderWidth:2,borderColor:'#141414',hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.label+': ₨'+ctx.raw.toLocaleString()}}}}});
       const leg=document.getElementById('pie-leg');
-      if(leg) leg.innerHTML=topMo.map(([c,a],i)=>`<div class="pl-row" onclick="openCatModal('${c.replace(/'/g,"\'")}',true)"><div class="pl-dot" style="background:${CC[i%CC.length]}"></div><div class="pl-name">${c}</div><div class="pl-pct">${totMoE>0?Math.round(a/totMoE*100):0}%</div></div>`).join('');
+      if(leg)leg.innerHTML=topMo.map(([c,a],i)=>`<div class="pl-row" onclick="openCatModal('${c.replace(/'/g,"\'")}',true)"><div class="pl-dot" style="background:${CC[i%CC.length]}"></div><div class="pl-name">${c}</div><div class="pl-pct">${totMoE>0?Math.round(a/totMoE*100):0}%</div></div>`).join('');
     }
   });
 }
@@ -723,28 +648,25 @@ function renderRecs(reset){
 window.openEdit=function(idx){
   const r=DB[idx];
   document.getElementById('eidx').value=idx;document.getElementById('e-dt').value=r.date;document.getElementById('e-tp').value=r.type;document.getElementById('e-ac').value=r.account||'Cash';document.getElementById('e-am').value=r.amount;
-  fillCatSel('e-ct');document.getElementById('e-ct').value=r.category;fillSubs('e-sb',r.category);document.getElementById('e-sb').value=r.subcategory||'';document.getElementById('e-nt').value=r.note||'';
+  fillCatSel('e-ct');document.getElementById('e-ct').value=r.category;window.fillSubs('e-sb',r.category);document.getElementById('e-sb').value=r.subcategory||'';document.getElementById('e-nt').value=r.note||'';
   document.getElementById('edit-mo').style.display='flex';
 };
-
 window.saveEdit=async function(){
   const idx=parseInt(document.getElementById('eidx').value),old=DB[idx];
   const nr={date:document.getElementById('e-dt').value,type:document.getElementById('e-tp').value,account:document.getElementById('e-ac').value,category:document.getElementById('e-ct').value,subcategory:document.getElementById('e-sb').value,amount:parseFloat(document.getElementById('e-am').value)||0,note:document.getElementById('e-nt').value.trim()};
   showSync('Updating...');
-  if(old._id) await deleteFromFirebase(old._id);
-  const newId = await saveToFirebase(nr);
-  if(newId) nr._id = newId;
+  if(old._id)await deleteFromFirebase(old._id);
+  await saveToFirebase(nr);
   DB[idx]=nr;closeMo();renderRecent();renderDash();
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
   hideSync();toast('Updated ✓');
 };
-
 window.delEntry=async function(){
   const idx=parseInt(document.getElementById('eidx').value);
   if(!confirm('Delete this entry permanently?'))return;
   const rec=DB[idx];
   showSync('Deleting...');
-  if(rec._id) await deleteFromFirebase(rec._id);
+  if(rec._id)await deleteFromFirebase(rec._id);
   DB.splice(idx,1);
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
   closeMo();renderRecent();renderDash();renderRecs(true);
@@ -759,7 +681,6 @@ function mPrev(){const f=document.getElementById('mf').value,i=document.getEleme
 window.mergeCats=function(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;if(!f||!i||f===i){toast('Select two different categories');return;}DB.forEach(r=>{if(r.category===f)r.category=i;});if(CAT_SUB[f]){CAT_SUB[i]=[...new Set([...(CAT_SUB[i]||[]),...CAT_SUB[f]])].sort();delete CAT_SUB[f];}toast('"'+f+'" merged ✓');renderCats();fillCatSel('s-ct');fillCatSel('mf');fillCatSel('mi');};
 window.addCat=function(){const n=document.getElementById('newcat').value.trim();if(!n){toast('Enter a name');return;}if(CAT_SUB[n]){toast('Already exists');return;}CAT_SUB[n]=[];fillCatSel('s-ct');fillCatSel('e-ct');document.getElementById('newcat').value='';toast('"'+n+'" added ✓');renderCats();};
 window.exportCSV=function(){const hdr='Date,Type,Account,Category,Subcategory,Amount,Note';const rows=DB.map(r=>[r.date,r.type,r.account,r.category,r.subcategory,r.amount,'"'+(r.note||'')+'"'].join(','));const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([hdr,...rows].join('\n'));a.download='MoneyManager_'+today()+'.csv';a.click();toast('CSV exported ✓');};
-
 </script>
 </body>
 </html>
