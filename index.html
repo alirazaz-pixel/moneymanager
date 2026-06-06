@@ -605,12 +605,25 @@ window.onload = () => {
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
+
+  // Try localStorage — but validate it has real data
   const cached = localStorage.getItem('mm_db');
-  if(cached){try{const t=JSON.parse(cached);if(t.length>0)DB=t;}catch(e){}}
+  if(cached){
+    try{
+      const t=JSON.parse(cached);
+      // Only use if it has records with actual amounts
+      if(t.length>100 && t[0].amount>0){DB=t;}
+      else{localStorage.removeItem('mm_db');}
+    }catch(e){localStorage.removeItem('mm_db');}
+  }
+
+  // Fall back to embedded data
   if(DB.length===0) DB=EMBEDDED;
+
   renderDash();renderRecent();
   const ld=document.getElementById('ld');ld.classList.add('hide');ld.style.display='none';
-  // Start Google Sheets sync
+
+  // Sync from Google Sheets immediately
   syncFromSheets();
   setInterval(syncFromSheets, 15000);
 };
@@ -630,12 +643,51 @@ window.closeCatMo=()=>document.getElementById('cat-mo').style.display='none';
 window.clrS=()=>{document.getElementById('srch').value='';renderRecs(true);};
 window.loadMore=()=>renderRecs(false);
 
-async function saveToFirebase(rec){
-  showSync('Saving...');
-  try{const r=await addDoc(collection(db,COL),rec);hideSync();return r.id;}
-  catch(e){hideSync();return null;}
+async function syncFromSheets(){
+  try{
+    const res=await fetch('https://script.google.com/macros/s/AKfycbzWCulE2nZ_iLmI69hGatdkZsZus2qT4GRKe8Nlupsg7575cUulhYqEt3V7GHF7W2qf0w/exec?action=read&t='+Date.now());
+    const data=await res.json();
+    if(data.status==='ok'&&data.data&&data.data.length>1){
+      const h=data.data[0];
+      const di=h.indexOf('Date'),ti=h.indexOf('Type'),ai=h.indexOf('Account'),
+            ci=h.indexOf('Category'),si=h.indexOf('Subcategory'),mi=h.indexOf('Amount'),ni=h.indexOf('Note');
+      const nDB=data.data.slice(1).map(r=>{
+        return {date:String(r[di]).substring(0,10),type:String(r[ti]),
+          account:String(r[ai]||'Cash'),category:String(r[ci]||''),
+          subcategory:String(r[si]||''),amount:parseFloat(r[mi])||0,note:String(r[ni]||'')};
+      }).filter(r=>r.amount>0&&r.date&&r.date.length===10);
+      nDB.sort((a,b)=>b.date.localeCompare(a.date));
+      DB=nDB;
+      try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+      document.getElementById('rcount2').textContent=DB.length.toLocaleString()+' records';
+      document.getElementById('lastsync').textContent=new Date().toLocaleTimeString();
+      setFbStatus(true);
+      renderDash();renderRecent();
+      showUpdated();
+    }
+  }catch(e){console.log('Sync error:',e);setFbStatus(false);}
 }
-async function deleteFromFirebase(id){try{await deleteDoc(doc(db,COL,id));return true;}catch(e){return false;}}
+
+async function saveToFirebase(rec){
+  try{
+    const p=new URLSearchParams({action:'append',date:rec.date,type:rec.type,
+      account:rec.account||'Cash',category:rec.category,subcategory:rec.subcategory||'',
+      amount:rec.amount,note:rec.note||''});
+    const res=await fetch('https://script.google.com/macros/s/AKfycbzWCulE2nZ_iLmI69hGatdkZsZus2qT4GRKe8Nlupsg7575cUulhYqEt3V7GHF7W2qf0w/exec?'+p.toString());
+    const data=await res.json();
+    return data.status==='ok'?'ok':null;
+  }catch(e){return null;}
+}
+
+async function deleteFromFirebase(rec){
+  try{
+    const p=new URLSearchParams({action:'delete',type:rec.type||'',
+      category:rec.category||'',subcategory:rec.subcategory||'',
+      amount:rec.amount||0,note:rec.note||''});
+    await fetch('https://script.google.com/macros/s/AKfycbzWCulE2nZ_iLmI69hGatdkZsZus2qT4GRKe8Nlupsg7575cUulhYqEt3V7GHF7W2qf0w/exec?'+p.toString());
+    return true;
+  }catch(e){return false;}
+}
 
 function getAmtVal(id){
   const v=document.getElementById(id).value.trim();
