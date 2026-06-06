@@ -638,6 +638,7 @@ document.addEventListener('click', function(e) {
 
 // FIREBASE REAL-TIME LISTENER (last 7 days only)
 function startRealtimeListener() {
+  try {
   const d = new Date(); d.setDate(d.getDate()-7);
   const cutoff = d.toISOString().split('T')[0];
   const q = query(collection(db,COL), where('date','>=',cutoff), orderBy('date','desc'));
@@ -653,6 +654,7 @@ function startRealtimeListener() {
     renderDash();renderRecent();
     showUpdated();
   }, err=>{console.log(err);setFbStatus(false);});
+  } catch(e){console.log('Listener failed:',e);setFbStatus(false);}
 }
 
 window.onload = () => {
@@ -660,12 +662,17 @@ window.onload = () => {
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
+  // Load from localStorage instantly
   const cached = localStorage.getItem('mm_db');
   if(cached){try{const t=JSON.parse(cached);if(t.length>0)DB=t;}catch(e){}}
   if(DB.length===0) DB=EMBEDDED;
+  // Show data and hide loading screen IMMEDIATELY — never wait for Firebase
   renderDash();renderRecent();
-  const ld=document.getElementById('ld');ld.classList.add('hide');ld.style.display='none';
-  startRealtimeListener();
+  const ld=document.getElementById('ld');
+  ld.classList.add('hide');
+  ld.style.display='none';
+  // Try Firebase in background — if quota exceeded, app still works
+  try{startRealtimeListener();}catch(e){console.log('Firebase offline:',e);}
 };
 function setDates(){const t=today();['s-dt','m-dt','sp-dt'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=t;});}
 
