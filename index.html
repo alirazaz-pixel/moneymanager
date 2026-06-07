@@ -353,8 +353,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
   <div class="sb2">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g4)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     <input type="text" id="srch" placeholder="Search note, category, amount..."
-  oninput="filt.yr='all';filt.tp='all';filt.from='';filt.to='';document.querySelectorAll('.fr .pill').forEach(p=>p.classList.remove('on'));const fp=document.querySelector('.fr .pill');if(fp)fp.classList.add('on');renderRecs(true)"
-  onkeydown="if(event.key==='Enter'){event.preventDefault();filt.yr='all';filt.tp='all';filt.from='';filt.to='';document.querySelectorAll('.fr .pill').forEach(p=>p.classList.remove('on'));const fp=document.querySelector('.fr .pill');if(fp)fp.classList.add('on');renderRecs(true);}">
+  oninput="doSearch()"
+  onkeydown="if(event.key==='Enter'){event.preventDefault();doSearch();}">
     <button class="clr" onclick="clrS()">&times;</button>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
@@ -1067,6 +1067,15 @@ window.openCatModal=function(cat,monthOnly,filterSub=null){
 };
 
 function renderPills(){const yrs=[...new Set(DB.map(r=>new Date(r.date+'T00:00:00').getFullYear()))].sort((a,b)=>b-a);document.getElementById('pills').innerHTML=`<div class="pill on" onclick="setF('tp','all',this)">All</div><div class="pill" onclick="setF('tp','Income',this)">Income</div><div class="pill" onclick="setF('tp','Expense',this)">Expense</div>${yrs.map(y=>`<div class="pill" onclick="setF('yr','${y}',this)">${y}</div>`).join('')}`;}
+window.doSearch=function(){
+  filt.yr='all';filt.tp='all';
+  rOff=0;
+  // Highlight "All" pill
+  document.querySelectorAll('.fr .pill').forEach(p=>p.classList.remove('on'));
+  const allPill=document.querySelector('.fr .pill');
+  if(allPill)allPill.classList.add('on');
+  renderRecs(true);
+};
 window.setF=function(k,v,el){filt[k]=v;filt.from='';filt.to='';document.getElementById('filt-from').value='';document.getElementById('filt-to').value='';rOff=0;document.querySelectorAll('.fr .pill').forEach(p=>p.classList.remove('on'));el.classList.add('on');renderRecs(true);};
 window.applyDateFilter=function(){
   filt.from=document.getElementById('filt-from').value;
