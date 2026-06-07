@@ -292,8 +292,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
           <div class="fl"><label>Account</label><select id="s-ac"><option>Cash</option><option>Credit Card</option></select></div>
         </div>
         <div class="fg">
-          <div class="fl"><label>Category</label><select id="s-ct" onchange="fillSubs('s-sb',this.value)"><option value="">Select...</option></select></div>
-          <div class="fl"><label>Subcategory</label><select id="s-sb"><option value="">Select...</option></select></div>
+          <div class="fl"><label>Category</label><select id="s-ct" onchange="onCatChange('s-ct','s-sb')"><option value="">Select...</option></select></div>
+          <div class="fl"><label>Subcategory</label><select id="s-sb" onchange="onSubChange('s-sb','s-ct')"><option value="">Select...</option></select></div>
         </div>
       </div>
       <div id="transfer-date-row" style="display:none;margin-bottom:9px">
@@ -352,7 +352,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 <div class="page" id="page-recs">
   <div class="sb2">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g4)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" id="srch" placeholder="Search note, category, amount..." oninput="renderRecs(true)">
+    <input type="text" id="srch" placeholder="Search note, category, amount..." oninput="filt.yr='all';filt.tp='all';document.querySelectorAll('.fr .pill').forEach(p=>p.classList.remove('on'));const fp=document.querySelector('.fr .pill');if(fp)fp.classList.add('on');renderRecs(true)">
     <button class="clr" onclick="clrS()">&times;</button>
   </div>
   <div class="fr" id="pills"></div>
@@ -446,8 +446,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
       </div>
     </div>
     <div class="fg" style="margin-bottom:10px">
-      <div class="fl"><label>Category</label><select id="e-ct" onchange="fillSubs('e-sb',this.value)"><option value="">Select...</option></select></div>
-      <div class="fl"><label>Subcategory</label><select id="e-sb"><option value="">Select...</option></select></div>
+      <div class="fl"><label>Category</label><select id="e-ct" onchange="onCatChange('e-ct','e-sb')"><option value="">Select...</option></select></div>
+      <div class="fl"><label>Subcategory</label><select id="e-sb" onchange="onSubChange('e-sb','e-ct')"><option value="">Select...</option></select></div>
     </div>
     <div class="fg x1" style="margin-bottom:0">
       <div class="fl autocomplete-wrap">
@@ -578,7 +578,7 @@ document.addEventListener('click',function(e){
 });
 
 // AUTOCOMPLETE
-function acInput(input,listId){
+window.acInput=function(input,listId){
   const q=input.value.trim().toLowerCase();const list=document.getElementById(listId);
   if(!q){list.classList.remove('show');return;}
   const notes=[...new Set(DB.map(r=>r.note).filter(n=>n&&n.toLowerCase().includes(q)))]
@@ -589,16 +589,16 @@ function acInput(input,listId){
     return`<div class="autocomplete-item" data-val="${n.replace(/"/g,'&quot;')}" onclick="acSelect(this,'${input.id}','${listId}')">${hl}</div>`;}).join('');
   list.classList.add('show');
 }
-function acSelect(item,inputId,listId){document.getElementById(inputId).value=item.dataset.val;acHide(listId);}
-function acHide(listId){const l=document.getElementById(listId);if(l)l.classList.remove('show');}
-function acKey(e,listId){
+window.acSelect=function(item,inputId,listId){document.getElementById(inputId).value=item.dataset.val;acHide(listId);};
+window.acHide=function(listId){const l=document.getElementById(listId);if(l)l.classList.remove('show');};
+window.acKey=function(e,listId){
   const list=document.getElementById(listId);if(!list.classList.contains('show'))return;
   const items=list.querySelectorAll('.autocomplete-item'),active=list.querySelector('.active');
   if(e.key==='ArrowDown'){e.preventDefault();const next=active?active.nextElementSibling:items[0];if(active)active.classList.remove('active');if(next)next.classList.add('active');}
   else if(e.key==='ArrowUp'){e.preventDefault();const prev=active?active.previousElementSibling:items[items.length-1];if(active)active.classList.remove('active');if(prev)prev.classList.add('active');}
   else if(e.key==='Enter'&&active){e.preventDefault();document.getElementById(e.target.id).value=active.dataset.val;acHide(listId);}
   else if(e.key==='Escape')acHide(listId);
-}
+};
 document.addEventListener('click',e=>{document.querySelectorAll('.autocomplete-list').forEach(l=>{if(!l.contains(e.target))l.classList.remove('show');});});
 
 // FIREBASE - Real-time listener (last 7 days only — saves reads)
@@ -681,9 +681,44 @@ function getAmtVal(id){const v=document.getElementById(id).value.trim();
   try{const r=Function('"use strict";return ('+v.replace(/[^0-9+\-*\/\.\(\)]/g,'')+') ')();if(!isNaN(r)&&isFinite(r)&&r>0)return Math.round(r*100)/100;}catch(e){}
   return parseFloat(v)||0;}
 
-function fillCatSel(id){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';Object.keys(CAT_SUB).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});}
-window.fillSubs=function(id,cat){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';(CAT_SUB[cat]||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});};
+function fillCatSel(id){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';Object.keys(CAT_SUB).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});const addOpt=document.createElement('option');addOpt.value='__add_new__';addOpt.textContent='+ Add new category...';addOpt.style.color='var(--gn)';s.appendChild(addOpt);}
+window.fillSubs=function(id,cat){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';(CAT_SUB[cat]||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});if(cat){const addOpt=document.createElement('option');addOpt.value='__add_sub__';addOpt.textContent='+ Add new subcategory...';addOpt.style.color='var(--gn)';s.appendChild(addOpt);}};
 
+// Handle add new category/subcategory from dropdown
+window.onCatChange=function(selId, subId){
+  const val=document.getElementById(selId).value;
+  if(val==='__add_new__'){
+    const n=prompt('New category name:');
+    if(n&&n.trim()){
+      const nn=n.trim();
+      if(!CAT_SUB[nn]){CAT_SUB[nn]=[];toast('"'+nn+'" added ✓');}
+      fillCatSel(selId);
+      document.getElementById(selId).value=nn;
+      window.fillSubs(subId,nn);
+    } else {
+      document.getElementById(selId).value='';
+    }
+    return;
+  }
+  window.fillSubs(subId,val);
+};
+window.onSubChange=function(selId,catId){
+  const val=document.getElementById(selId).value;
+  if(val==='__add_sub__'){
+    const cat=document.getElementById(catId).value;
+    const n=prompt('New subcategory for "'+cat+'":');
+    if(n&&n.trim()){
+      const nn=n.trim();
+      if(!CAT_SUB[cat])CAT_SUB[cat]=[];
+      if(!CAT_SUB[cat].includes(nn)){CAT_SUB[cat].push(nn);CAT_SUB[cat].sort();}
+      window.fillSubs(selId,cat);
+      document.getElementById(selId).value=nn;
+      toast('"'+nn+'" added ✓');
+    } else {
+      document.getElementById(selId).value='';
+    }
+  }
+};
 window.setType=function(tp){
   curType=tp;
   document.getElementById('btn-e').className='ttb'+(tp==='Expense'?' e':'');
@@ -1069,10 +1104,57 @@ window.delEntry=async function(){
 
 function cTab(id,el){['list','merge','add'].forEach(t=>document.getElementById('ct-'+t).style.display='none');document.querySelectorAll('#page-cats .tabs .tab').forEach(b=>b.classList.remove('on'));document.getElementById('ct-'+id).style.display='block';el.classList.add('on');if(id==='list')renderCats();}
 window.cTab=cTab;
-function renderCats(){const tots={};DB.forEach(r=>{if(!tots[r.category])tots[r.category]={c:0,t:0};tots[r.category].c++;tots[r.category].t+=r.amount;});document.getElementById('catbody').innerHTML=Object.entries(tots).sort((a,b)=>b[1].t-a[1].t).map(([c,d])=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--rsm);border:1px solid var(--bdr);margin-bottom:6px;background:var(--bg3)"><div><div style="font-size:13px;font-weight:500;color:var(--g1)">${c}</div><div style="font-size:11px;color:var(--g4)">${d.c.toLocaleString()} records &middot; ${pkr(d.t)}</div></div><button class="btn bg bsm" onclick="renameCat('${c.replace(/'/g,"\'")}')">Rename</button></div>`).join('');}
+function renderCats(){
+  const tots={};
+  DB.forEach(r=>{if(!tots[r.category])tots[r.category]={c:0,t:0};tots[r.category].c++;tots[r.category].t+=r.amount;});
+  document.getElementById('catbody').innerHTML=Object.entries(tots).sort((a,b)=>b[1].t-a[1].t).map(([c,d])=>{
+    const cs=c.replace(/'/g,"\'");
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--rsm);border:1px solid var(--bdr);margin-bottom:6px;background:var(--bg3)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--g1)">${c}</div>
+        <div style="font-size:11px;color:var(--g4)">${d.c.toLocaleString()} records &middot; ${pkr(d.t)}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn bg bsm" onclick="renameCat('${cs}')">Rename</button>
+        <button class="btn bg bsm" onclick="deleteCat('${cs}')" style="color:var(--rd);border-color:rgba(255,69,96,.3)">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
 window.renameCat=function(cat){const n=prompt('Rename "'+cat+'" to:',cat);if(!n||!n.trim()||n.trim()===cat)return;const nn=n.trim();DB.forEach(r=>{if(r.category===cat)r.category=nn;});if(CAT_SUB[cat]){CAT_SUB[nn]=CAT_SUB[cat];delete CAT_SUB[cat];}toast('"'+cat+'" renamed ✓');renderCats();fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');};
 function mPrev(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;const p=document.getElementById('mprev');if(f&&i&&f!==i){const fc=DB.filter(r=>r.category===f).length,ic=DB.filter(r=>r.category===i).length;p.style.display='block';p.innerHTML=`<strong>${fc}</strong> records from <strong>${f}</strong> &rarr; <strong>${i}</strong> (${ic} records)`;}else p.style.display='none';}
 window.mergeCats=function(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;if(!f||!i||f===i){toast('Select two different categories');return;}DB.forEach(r=>{if(r.category===f)r.category=i;});if(CAT_SUB[f]){CAT_SUB[i]=[...new Set([...(CAT_SUB[i]||[]),...CAT_SUB[f]])].sort();delete CAT_SUB[f];}toast('"'+f+'" merged ✓');renderCats();fillCatSel('s-ct');fillCatSel('mf');fillCatSel('mi');};
+window.deleteCat=function(cat){
+  const recs=DB.filter(r=>r.category===cat);
+  if(recs.length===0){
+    // No records - just delete
+    if(CAT_SUB[cat])delete CAT_SUB[cat];
+    toast('"'+cat+'" deleted ✓');renderCats();
+    fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
+    return;
+  }
+  // Has records - show count and ask where to move
+  const others=Object.keys(CAT_SUB).filter(c=>c!==cat).sort();
+  const opts=others.map((c,i)=>(i+1)+'. '+c).join('\n');
+  const msg='"'+cat+'" has '+recs.length+' records.\n\nMove them to which category?\n\n'+opts+'\n\nType the category name:';
+  const dest=prompt(msg);
+  if(!dest||!dest.trim()){toast('Cancelled');return;}
+  const destCat=dest.trim();
+  // Find exact match (case insensitive)
+  const match=Object.keys(CAT_SUB).find(c=>c.toLowerCase()===destCat.toLowerCase());
+  if(!match){toast('Category "'+destCat+'" not found');return;}
+  if(match===cat){toast('Cannot move to same category');return;}
+  // Move all records
+  let moved=0;
+  DB.forEach(r=>{if(r.category===cat){r.category=match;moved++;}});
+  // Delete old category
+  if(CAT_SUB[cat])delete CAT_SUB[cat];
+  try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
+  toast(moved+' records moved to "'+match+'" ✓');
+  renderCats();renderDash();
+  fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
+};
+
 window.addCat=function(){const n=document.getElementById('newcat').value.trim();if(!n){toast('Enter a name');return;}if(CAT_SUB[n]){toast('Already exists');return;}CAT_SUB[n]=[];fillCatSel('s-ct');fillCatSel('e-ct');document.getElementById('newcat').value='';toast('"'+n+'" added ✓');renderCats();};
 window.exportCSV=function(){const hdr='Date,Type,Account,Category,Subcategory,Amount,Note';const rows=DB.map(r=>[r.date,r.type,r.account,r.category,r.subcategory,r.amount,'"'+(r.note||'')+'"'].join(','));const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([hdr,...rows].join('\n'));a.download='MoneyManager_'+today()+'.csv';a.click();toast('CSV exported ✓');};
 </script>
