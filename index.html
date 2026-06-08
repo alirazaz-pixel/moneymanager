@@ -205,6 +205,11 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .sync-ind{position:fixed;top:62px;right:12px;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.25);color:var(--gn);font-size:10px;font-weight:600;padding:4px 10px;border-radius:20px;z-index:99;opacity:0;transition:opacity .3s}
 .sync-ind.on{opacity:1}
 @media(max-width:600px){
+  .nav-label{display:none}
+  .nav-icon{display:inline!important}
+  .ntab{padding:8px 10px;font-size:16px}
+  .logo{font-size:13px}
+  .logo-ic{width:26px;height:26px;font-size:14px}
   .kg{grid-template-columns:1fr 1fr}.kg .kpi:nth-child(3){grid-column:1/-1}
   .kv{font-size:13px}.kl{font-size:8px}
   .chart-grid{grid-template-columns:1fr}
@@ -244,10 +249,10 @@ button,input,select{font-family:var(--f);cursor:pointer}
 </div>
 <nav class="nav">
   <span class="logo"><span class="logo-ic">&#x1F4B0;</span>Money Manager<small>&#x20A8; PKR</small></span>
-  <button class="ntab on" onclick="go('dash',this)">Dashboard</button>
-  <button class="ntab" onclick="go('entry',this)">+ Add</button>
-  <button class="ntab" onclick="go('recs',this)">Records</button>
-  <button class="ntab" onclick="go('cats',this)">Categories</button>
+  <button class="ntab on" onclick="go('dash',this)"><span class="nav-label">Dashboard</span><span class="nav-icon" style="display:none">&#x1F3E0;</span></button>
+  <button class="ntab" onclick="go('entry',this)"><span class="nav-label">+ Add</span><span class="nav-icon" style="display:none">+</span></button>
+  <button class="ntab" onclick="go('recs',this)"><span class="nav-label">Records</span><span class="nav-icon" style="display:none">&#x1F4CB;</span></button>
+  <button class="ntab" onclick="go('cats',this)"><span class="nav-label">Categories</span><span class="nav-icon" style="display:none">&#x1F4C2;</span></button>
   <button class="ntab" onclick="go('cfg',this)">&#9881;</button>
   <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">&#9790;</button>
 </nav>
@@ -549,7 +554,7 @@ applyTheme();
 const pkr = n => '₨ ' + Math.abs(n).toLocaleString('en-PK',{maximumFractionDigits:0});
 const netFmt = n => n<0?'('+pkr(n)+')':n>0?'+'+pkr(n):'₨ 0';
 const fmtD = d => new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-const today = () => new Date().toISOString().split('T')[0];
+const today = () => {const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
 function mkChart(id,cfg){if(charts[id]){charts[id].destroy();delete charts[id];}const el=document.getElementById(id);if(!el)return;charts[id]=new Chart(el,cfg);}
 let tT;
 function toast(m,d=2400){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),d);}
@@ -883,6 +888,8 @@ function sumDB(tp,yr,mo){return DB.filter(r=>{
 
 function renderDash(){
   const now=new Date(),Y=now.getFullYear(),Mo=now.getMonth()+1,day=now.getDate(),dInMo=new Date(Y,Mo,0).getDate();
+  // Use local date string to avoid UTC timezone issues
+  const localToday=Y+'-'+String(Mo).padStart(2,'0')+'-'+String(day).padStart(2,'0');
   const mName=now.toLocaleString('en',{month:'long'})+' '+Y;
   const mtdI=sumDB('Income',Y,Mo),mtdE=sumDB('Expense',Y,Mo),mtdN=mtdI-mtdE;
   const ytdI=sumDB('Income',Y,null),ytdE=sumDB('Expense',Y,null),ytdN=ytdI-ytdE;
@@ -918,7 +925,7 @@ function renderDash(){
 
   // Weekly breakdown - Monday to Sunday
   // Use today's date string directly to avoid timezone issues
-  const todayStr2=today(); // e.g. "2026-06-08"
+  const todayStr2=localToday; // local date string e.g. "2026-06-09"
   const todayDate=new Date(todayStr2+'T00:00:00');
   const dow2=todayDate.getDay(); // 0=Sun,1=Mon,...6=Sat
   const daysFromMon2=dow2===0?6:dow2-1; // Mon=0,Tue=1,...Sun=6
@@ -940,7 +947,7 @@ function renderDash(){
   const lwTotal=lwData.reduce((s,v)=>s+v,0);
   const wkDiff=lwTotal>0?Math.round((weekTotal-lwTotal)/lwTotal*100):0;
 
-  const todayStr=today();
+  const todayStr=localToday;
   const todayExp=DB.filter(r=>r.date===todayStr&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0);
 
   const months=[];let cy=Y,cm=Mo;for(let i=0;i<24;i++){months.push({y:cy,m:cm});cm--;if(cm===0){cm=12;cy--;}}
@@ -968,19 +975,15 @@ function renderDash(){
       <div class="st"><div class="stl">Projection</div><div class="stv am">${pkr(proj)}</div></div>
       <div class="st"><div class="stl">Day ${day}/${dInMo}</div><div class="stv bl">${Math.round(day/dInMo*100)}%</div></div>
     </div>
-    <div class="card" style="background:linear-gradient(135deg,rgba(0,214,143,.08),rgba(76,142,255,.08));border:1px solid rgba(0,214,143,.2);margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.15);border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">&#x1F4C5;</span>
         <div>
-          <div style="font-size:10px;font-weight:700;color:var(--gn);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">&#x1F4C5; Daily Budget Remaining</div>
-          <div style="font-size:22px;font-weight:700;color:var(--gn);font-variant-numeric:tabular-nums">${pkr(daysLeft>0?Math.round(mtdN/daysLeft):0)}<small style="font-size:12px;font-weight:500;color:var(--g3)">/day</small></div>
-          <div style="font-size:11px;color:var(--g4);margin-top:3px">Based on ${pkr(mtdN)} remaining &middot; ${daysLeft} days left in ${now.toLocaleString('en',{month:'long'})}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">If spent avg/day</div>
-          <div style="font-size:15px;font-weight:700;color:${mtdN>0?'var(--am)':'var(--rd)'}">${pkr(proj)}</div>
-          <div style="font-size:10px;color:var(--g4);margin-top:2px">end of month projection</div>
+          <div style="font-size:9px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.5px">Can spend/day</div>
+          <div style="font-size:15px;font-weight:700;color:var(--gn);font-variant-numeric:tabular-nums">${pkr(daysLeft>0?Math.round(mtdN/daysLeft):0)}</div>
         </div>
       </div>
+      <div style="font-size:11px;color:var(--g4);text-align:right">${daysLeft} days left &middot; ${pkr(mtdN)} remaining</div>
     </div>
 
     <div class="sh"><span>Accounts</span></div>
