@@ -205,12 +205,33 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .sync-ind.on{opacity:1}
 @media(max-width:600px){
   .kg{grid-template-columns:1fr 1fr}.kg .kpi:nth-child(3){grid-column:1/-1}
+  .kv{font-size:13px}.kl{font-size:8px}
   .chart-grid{grid-template-columns:1fr}
   .pie-container{grid-template-columns:1fr}
   .pie-container .chart-wrap{height:160px}
   .mr{grid-template-columns:1fr 1fr 80px 24px}
   .sprow{grid-template-columns:1fr 80px 24px}
   .ntab{padding:7px 8px;font-size:11px}.logo small{display:none}
+  .ss{gap:6px}.st{min-width:80px;padding:9px 10px}
+  .stv{font-size:12px}.stl{font-size:8px}
+  .acc-grid{grid-template-columns:1fr 1fr}
+  .acc-bal{font-size:13px}
+  .week-grid{gap:2px}
+  .week-day-name{font-size:8px}
+  .week-amt{font-size:7px}
+  .sh{font-size:9px}
+  .card{padding:12px}
+  .chart-card{padding:12px}
+  .page{padding:10px;padding-bottom:60px}
+  .t{font-size:11px}
+  .t td,.t th{padding:7px 8px}
+  .rr{padding:8px 0;gap:8px}
+  .rd2{font-size:12px}
+  .rm{font-size:10px}
+  .ra{font-size:12px}
+  .btn.bw{padding:11px}
+  .mb{padding:16px}
+  .fg{gap:7px;margin-bottom:7px}
 }
 </style>
 </head>
@@ -767,7 +788,7 @@ window.saveSingle=async function(){
   const ct=document.getElementById('s-ct').value;
   const sb=document.getElementById('s-sb').value;
   if(!dt||!ct){toast('Fill Date and Category');return;}
-  const rec={date:dt,type:curType,account:ac,category:ct,subcategory:sb,amount:am,note:nt};
+  const rec={date:dt,type:curType,account:ac,category:ct,subcategory:sb,amount:am,note:nt,_ts:Date.now()};
   // Update UI immediately
   DB.unshift(rec);
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
@@ -893,26 +914,32 @@ function renderDash(){
   const ccPaid=DB.filter(r=>r.account==='Credit Card'&&r.category==='Transfer'&&r.type==='Income').reduce((s,r)=>s+r.amount,0);
   const ccDue=ccExp-ccPaid;
 
-  // Weekly breakdown - Monday to Sunday
+  // Weekly breakdown - Monday to Sunday (fixed)
   const dow=now.getDay(); // 0=Sun,1=Mon,...6=Sat
-  const daysFromMon=dow===0?6:dow-1; // days since last Monday
-  const weekStart=new Date(now);weekStart.setDate(now.getDate()-daysFromMon);weekStart.setHours(0,0,0,0);
+  const daysFromMon=dow===0?6:dow-1; // days since last Monday (Sun=6, Mon=0, Tue=1, ...)
+  const weekStart=new Date(now);
+  weekStart.setDate(now.getDate()-daysFromMon);
+  weekStart.setHours(0,0,0,0);
   const weekDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const weekData=weekDays.map((_,i)=>{
-    const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);
-    const ds=d.toISOString().split('T')[0];
-    return DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0);
+  // Build date strings for each day of this week
+  const weekDates=weekDays.map((_,i)=>{
+    const d=new Date(weekStart.getTime());
+    d.setDate(weekStart.getDate()+i);
+    return d.toISOString().split('T')[0];
   });
+  const weekData=weekDates.map(ds=>
+    DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0)
+  );
   const weekMax=Math.max(...weekData,1),weekTotal=weekData.reduce((s,v)=>s+v,0);
   const todayDayIdx=daysFromMon; // 0=Mon,...6=Sun
 
-  // Last week
-  const lwStart=new Date(weekStart);lwStart.setDate(lwStart.getDate()-7);
-  const lwData=weekDays.map((_,i)=>{
-    const d=new Date(lwStart);d.setDate(lwStart.getDate()+i);
-    const ds=d.toISOString().split('T')[0];
-    return DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0);
+  // Last week dates
+  const lwDates=weekDates.map(ds=>{
+    const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()-7);return d.toISOString().split('T')[0];
   });
+  const lwData=lwDates.map(ds=>
+    DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0)
+  );
   const lwTotal=lwData.reduce((s,v)=>s+v,0);
   const wkDiff=lwTotal>0?Math.round((weekTotal-lwTotal)/lwTotal*100):0;
 
@@ -1029,7 +1056,7 @@ function renderDash(){
 
   requestAnimationFrame(()=>{
     const lineEl=document.getElementById('ch-line');
-    if(lineEl)mkChart('ch-line',{type:'line',data:{labels:Array.from({length:day},(_,i)=>i+1),datasets:[{data:dailyData,borderColor:'#FF4560',backgroundColor:'rgba(255,69,96,.07)',borderWidth:2,pointBackgroundColor:'#FF4560',pointRadius:3,tension:.4,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{color:gc},ticks:xTk},y:{grid:{color:gc},ticks:yTk}}}});
+    if(lineEl)mkChart('ch-line',{type:'line',data:{labels:Array.from({length:day},(_,i)=>i+1),datasets:[{data:dailyData,borderColor:'#FF4560',backgroundColor:'rgba(255,69,96,.07)',borderWidth:2,pointBackgroundColor:'#FF4560',pointRadius:4,tension:.4,fill:true,pointHitRadius:20}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{color:gc},ticks:xTk},y:{grid:{color:gc},ticks:yTk}}}});
 
     const barEl=document.getElementById('ch-bar');
     if(barEl)mkChart('ch-bar',{type:'bar',data:{labels:bar6.map(({y,m})=>new Date(y,m-1,1).toLocaleString('en',{month:'short'})),datasets:[{label:'Income',data:bar6.map(({y,m})=>sumDB('Income',y,m)),backgroundColor:'rgba(0,214,143,.7)',borderRadius:5,borderSkipped:false},{label:'Expense',data:bar6.map(({y,m})=>sumDB('Expense',y,m)),backgroundColor:'rgba(255,69,96,.7)',borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{color:'#FFB800',font:{family:'DM Sans',size:11},boxWidth:10,padding:12}},tooltip:{...tt}},scales:{x:{grid:{display:false},ticks:{color:'#FFB800',font:{family:'DM Sans',size:11}}},y:{grid:{color:gc},ticks:yTk}}}});
