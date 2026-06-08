@@ -32,13 +32,14 @@
   --sh:0 2px 10px rgba(0,0,0,.08);--shmd:0 8px 40px rgba(0,0,0,.15);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overscroll-behavior:none;background:var(--bg)}
+html,body{height:100%;overscroll-behavior:none;background:var(--bg);overflow-x:hidden}
+body{max-width:100vw}
 body{font-family:var(--f);color:var(--g1);font-size:14px;-webkit-font-smoothing:antialiased;transition:background .2s,color .2s}
 button,input,select{font-family:var(--f);cursor:pointer}
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--g4);border-radius:2px}
-.nav{background:rgba(10,10,10,.96);backdrop-filter:blur(20px);height:56px;display:flex;align-items:center;padding:0 14px;gap:2px;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--bdr)}
+.nav{background:rgba(10,10,10,.96);backdrop-filter:blur(20px);height:56px;display:flex;align-items:center;padding:0 10px;gap:1px;position:sticky;top:0;z-index:100;border-bottom:1px solid var(--bdr);overflow:hidden;width:100%}
 [data-theme="light"] .nav{background:rgba(255,255,255,.96)}
 .logo{color:var(--g1);font-weight:700;font-size:15px;margin-right:auto;letter-spacing:-.4px;white-space:nowrap;display:flex;align-items:center;gap:8px}
 .logo-ic{width:30px;height:30px;background:linear-gradient(135deg,#00D68F,#00A870);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 16px rgba(0,214,143,.3)}
@@ -887,6 +888,7 @@ function renderDash(){
   const ytdI=sumDB('Income',Y,null),ytdE=sumDB('Expense',Y,null),ytdN=ytdI-ytdE;
   const allI=sumDB('Income',null,null),allE=sumDB('Expense',null,null),allN=allI-allE;
   const dAvg=day>0?Math.round(mtdE/day):0,proj=Math.round(dAvg*dInMo);
+  const daysLeft=dInMo-day; // remaining days in month
 
   // Last month comparison
   const lmY=Mo===1?Y-1:Y,lmMo=Mo===1?12:Mo-1;
@@ -914,29 +916,24 @@ function renderDash(){
   const ccPaid=DB.filter(r=>r.account==='Credit Card'&&r.category==='Transfer'&&r.type==='Income').reduce((s,r)=>s+r.amount,0);
   const ccDue=ccExp-ccPaid;
 
-  // Weekly breakdown - Monday to Sunday (fixed)
-  const dow=now.getDay(); // 0=Sun,1=Mon,...6=Sat
-  const daysFromMon=dow===0?6:dow-1; // days since last Monday (Sun=6, Mon=0, Tue=1, ...)
-  const weekStart=new Date(now);
-  weekStart.setDate(now.getDate()-daysFromMon);
-  weekStart.setHours(0,0,0,0);
+  // Weekly breakdown - Monday to Sunday
+  // Use today's date string directly to avoid timezone issues
+  const todayStr2=today(); // e.g. "2026-06-08"
+  const todayDate=new Date(todayStr2+'T00:00:00');
+  const dow2=todayDate.getDay(); // 0=Sun,1=Mon,...6=Sat
+  const daysFromMon2=dow2===0?6:dow2-1; // Mon=0,Tue=1,...Sun=6
   const weekDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  // Build date strings for each day of this week
-  const weekDates=weekDays.map((_,i)=>{
-    const d=new Date(weekStart.getTime());
-    d.setDate(weekStart.getDate()+i);
-    return d.toISOString().split('T')[0];
-  });
+  // Calculate week dates by offsetting from today's date string
+  function addDays(dateStr,n){const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()+n);return d.toISOString().split('T')[0];}
+  const monDateStr=addDays(todayStr2,-daysFromMon2); // This Monday
+  const weekDates=weekDays.map((_,i)=>addDays(monDateStr,i));
   const weekData=weekDates.map(ds=>
     DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0)
   );
   const weekMax=Math.max(...weekData,1),weekTotal=weekData.reduce((s,v)=>s+v,0);
-  const todayDayIdx=daysFromMon; // 0=Mon,...6=Sun
-
+  const todayDayIdx=daysFromMon2; // 0=Mon,...6=Sun
   // Last week dates
-  const lwDates=weekDates.map(ds=>{
-    const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()-7);return d.toISOString().split('T')[0];
-  });
+  const lwDates=weekDates.map(ds=>addDays(ds,-7));
   const lwData=lwDates.map(ds=>
     DB.filter(r=>r.date===ds&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0)
   );
@@ -970,6 +967,20 @@ function renderDash(){
       <div class="st"><div class="stl">Today</div><div class="stv rd">${pkr(todayExp)}</div></div>
       <div class="st"><div class="stl">Projection</div><div class="stv am">${pkr(proj)}</div></div>
       <div class="st"><div class="stl">Day ${day}/${dInMo}</div><div class="stv bl">${Math.round(day/dInMo*100)}%</div></div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg,rgba(0,214,143,.08),rgba(76,142,255,.08));border:1px solid rgba(0,214,143,.2);margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--gn);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px">&#x1F4C5; Daily Budget Remaining</div>
+          <div style="font-size:22px;font-weight:700;color:var(--gn);font-variant-numeric:tabular-nums">${pkr(daysLeft>0?Math.round(mtdN/daysLeft):0)}<small style="font-size:12px;font-weight:500;color:var(--g3)">/day</small></div>
+          <div style="font-size:11px;color:var(--g4);margin-top:3px">Based on ${pkr(mtdN)} remaining &middot; ${daysLeft} days left in ${now.toLocaleString('en',{month:'long'})}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">If spent avg/day</div>
+          <div style="font-size:15px;font-weight:700;color:${mtdN>0?'var(--am)':'var(--rd)'}">${pkr(proj)}</div>
+          <div style="font-size:10px;color:var(--g4);margin-top:2px">end of month projection</div>
+        </div>
+      </div>
     </div>
 
     <div class="sh"><span>Accounts</span></div>
