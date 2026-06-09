@@ -931,7 +931,12 @@ function renderDash(){
   const daysFromMon2=dow2===0?6:dow2-1; // Mon=0,Tue=1,...Sun=6
   const weekDays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   // Calculate week dates by offsetting from today's date string
-  function addDays(dateStr,n){const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()+n);return d.toISOString().split('T')[0];}
+  function addDays(dateStr,n){
+    const d=new Date(dateStr+'T00:00:00');
+    d.setDate(d.getDate()+n);
+    // Use local date parts to avoid UTC shift
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
   const monDateStr=addDays(todayStr2,-daysFromMon2); // This Monday
   const weekDates=weekDays.map((_,i)=>addDays(monDateStr,i));
   const weekData=weekDates.map(ds=>
