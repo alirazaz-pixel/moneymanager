@@ -618,8 +618,8 @@ document.addEventListener('click',function(e){
 });
 
 // AUTOCOMPLETE
-window.prevWeek = function(){ weekOffset--; renderDash(); };
-window.nextWeek = function(){ if(weekOffset<0){ weekOffset++; renderDash(); } };
+window.prevWeek = function(){ weekOffset--; console.log('weekOffset now:',weekOffset); renderDash(); };
+window.nextWeek = function(){ if(weekOffset<0){ weekOffset++; console.log('weekOffset now:',weekOffset); renderDash(); } };
 
 window.acInput=function(input,listId){
   const q=input.value.trim().toLowerCase();const list=document.getElementById(listId);
@@ -1011,7 +1011,7 @@ function renderDash(){
       </div>
     </div>
 
-    <div class="sh"><span>${weekLabel} &middot; Mon&ndash;Sun</span><span class="sh-hint">${wkDiff===0?'same as prev week':wkDiff>0?'&#9650; '+Math.abs(wkDiff)+'% vs prev':'&#9660; '+Math.abs(wkDiff)+'% vs prev'}</span></div>
+    <div class="sh"><span>${weekLabel} &middot; ${weekDates[0]} &ndash; ${weekDates[6]}</span><span class="sh-hint">${wkDiff===0?'same as prev week':wkDiff>0?'&#9650; '+Math.abs(wkDiff)+'% vs prev':'&#9660; '+Math.abs(wkDiff)+'% vs prev'}</span></div>
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <button onclick="prevWeek()" style="background:var(--bg3);border:1px solid var(--bdr2);border-radius:8px;width:32px;height:32px;font-size:16px;color:var(--g2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">&#8249;</button>
