@@ -954,6 +954,7 @@ function renderDash(){
   );
   const lwTotal=lwData.reduce((s,v)=>s+v,0);
   const wkDiff=lwTotal>0?Math.round((weekTotal-lwTotal)/lwTotal*100):0;
+  const weekLabel=weekOffset===0?'This week':weekOffset===-1?'Last week':'Week of '+monDateStr;
 
   const todayStr=localToday;
   const todayExp=DB.filter(r=>r.date===todayStr&&r.type==='Expense'&&r.category!=='Transfer').reduce((s,r)=>s+r.amount,0);
