@@ -181,7 +181,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .rd2{font-size:13px;font-weight:500;color:var(--g1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm{font-size:11px;color:var(--g4);margin-top:2px}
 .ra{font-size:13px;font-weight:700;flex-shrink:0;font-variant-numeric:tabular-nums}
-.mr{display:grid;grid-template-columns:1.2fr 1fr 90px 1fr 28px;gap:5px;align-items:end;margin-bottom:6px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
+.mr{display:grid;grid-template-columns:1fr 28px;gap:5px;align-items:start;margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
 .mtbar{background:rgba(76,142,255,.08);border:1px solid rgba(76,142,255,.15);border-radius:var(--rsm);padding:10px 14px;display:flex;justify-content:space-between;font-size:12px;color:var(--bl);font-weight:700;margin-top:8px}
 .spsi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .spst{background:var(--bg3);border-radius:var(--rsm);padding:10px 12px;border:1px solid var(--bdr)}
@@ -352,8 +352,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
         <div class="fl"><label>Date (all)</label><input type="date" id="m-dt"></div>
         <div class="fl"><label>Account</label><select id="m-ac"><option>Cash</option><option>Credit Card</option></select></div>
       </div>
-      <div id="mrows"></div>
-      <button class="btn bg bsm" onclick="addMR()" style="margin-top:6px">+ Add row</button>
+      <div id="mrows" style="max-height:55vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-right:2px"></div>
+      <button class="btn bg bsm" onclick="addMR()" style="margin-top:6px;position:sticky;bottom:0">+ Add row</button>
       <div class="mtbar"><span>Total:</span><span id="mtot">&#x20A8; 0</span></div>
       <button class="btn bp bw" onclick="saveMulti()">&#10003; &nbsp;Save all entries</button>
     </div>
@@ -369,7 +369,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
         <div class="spst"><div class="spstl">Remaining</div><div class="spstv gn" id="sp-rm">&#x20A8; 0</div></div>
       </div>
       <div class="pb"><div class="pf" id="sp-pf"></div></div>
-      <div id="sprows"></div>
+      <div id="sprows" style="max-height:45vh;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-right:2px"></div>
       <button class="btn bg bsm" onclick="addSR()" style="margin-top:6px">+ Add category</button>
       <button class="btn bp bw" onclick="saveSplit()">&#10003; &nbsp;Save split entries</button>
     </div>
@@ -452,6 +452,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
       <div style="font-size:11px;color:var(--g4)" id="lastsync">&#8212;</div>
     </div>
     <button class="btn bp bw" onclick="exportCSV()">&#128229; &nbsp;Export CSV</button>
+    <button class="btn bs bw" onclick="sync30Days()" style="margin-top:8px">&#8635; &nbsp;Sync last 30 days</button>
   </div>
   <div class="card">
     <div class="ctit">Import missing records</div>
@@ -519,7 +520,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, where, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, where, onSnapshot, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const app = initializeApp({
   apiKey: "AIzaSyBq3zzTscJrRUdqdcQWSdzIdRZW211agI0",
@@ -643,8 +644,8 @@ document.addEventListener('click',e=>{document.querySelectorAll('.autocomplete-l
 
 // FIREBASE - Real-time listener (last 7 days only — saves reads)
 function startRealtimeListener(){
-  const d=new Date();d.setDate(d.getDate()-7);
-  const cutoff=d.toISOString().split('T')[0];
+  const d=new Date();d.setDate(d.getDate()-60);
+  const cutoff=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   const q=query(collection(db,COL),where('date','>=',cutoff),orderBy('date','desc'));
   onSnapshot(q,(snap)=>{
     const recent=snap.docs.map(d=>({...d.data(),_id:d.id}));
@@ -827,7 +828,7 @@ function xBtn(cls){return `<button onclick="this.closest('.${cls}').remove();${c
 window.addMR=function(){
   const d=document.createElement('div');d.className='mr';
   const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
-  d.innerHTML=`<div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px" onchange="mRowSub(this)"><option value="">Select...</option>${cats}</select></div><div class="fl"><label style="font-size:9px">Subcategory</label><select class="msub" style="font-size:12px;padding:7px"><option value="">&mdash;</option></select></div><div class="fl"><label style="font-size:9px">Amount</label><input type="text" class="mamt" placeholder="0 or 100+50" oninput="calcMT()" style="font-size:12px;padding:7px" inputmode="decimal"></div><div class="fl"><label style="font-size:9px">Note</label><input type="text" placeholder="Description" style="font-size:12px;padding:7px"></div>${xBtn('mr')}`;
+  d.innerHTML=`<div class="fl" style="grid-column:1/-1"><label style="font-size:9px">Category & Subcategory</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px"><select style="font-size:12px;padding:7px" onchange="mRowSub(this)"><option value="">Select...</option>${cats}</select><select class="msub" style="font-size:12px;padding:7px"><option value="">&mdash;</option></select></div></div><div class="fl"><label style="font-size:9px">Amount</label><input type="text" class="mamt" placeholder="0 or 100+50" oninput="calcMT()" style="font-size:12px;padding:7px" inputmode="decimal"></div><div class="fl" style="grid-column:span 1"><label style="font-size:9px">Note</label><input type="text" placeholder="Description" style="font-size:12px;padding:7px;width:100%"></div>${xBtn('mr')}`;
   document.getElementById('mrows').appendChild(d);
 };
 window.mRowSub=function(sel){const sub=sel.closest('.mr').querySelector('.msub');sub.innerHTML='<option value="">&mdash;</option>';(CAT_SUB[sel.value]||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);});};
@@ -1250,6 +1251,38 @@ window.deleteCat=function(cat){
 };
 
 window.addCat=function(){const n=document.getElementById('newcat').value.trim();if(!n){toast('Enter a name');return;}if(CAT_SUB[n]){toast('Already exists');return;}CAT_SUB[n]=[];fillCatSel('s-ct');fillCatSel('e-ct');document.getElementById('newcat').value='';toast('"'+n+'" added ✓');renderCats();};
+window.sync30Days = async function(){
+  const btn = event.target;
+  btn.textContent = '⏳ Syncing...';
+  btn.disabled = true;
+  try {
+    const d = new Date();
+    d.setDate(d.getDate()-30);
+    const cutoff = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const q = query(collection(db, COL), where('date','>=',cutoff), orderBy('date','desc'));
+    const snap = await getDocs(q);
+    if(!snap.empty) {
+      const recent = snap.docs.map(d=>({...d.data(), _id:d.id}));
+      // Merge: keep old records before cutoff, replace recent ones from Firebase
+      const old = DB.filter(r=>r.date < cutoff);
+      DB = [...recent, ...old];
+      DB.sort((a,b)=>b.date.localeCompare(a.date));
+      try{localStorage.setItem('mm_db', JSON.stringify(DB));}catch(e){}
+      document.getElementById('rcount2').textContent = DB.length.toLocaleString()+' records';
+      document.getElementById('lastsync').textContent = new Date().toLocaleTimeString();
+      renderDash(); renderRecent();
+      toast('Synced '+recent.length+' records from last 30 days ✓');
+    } else {
+      toast('No records found in last 30 days');
+    }
+  } catch(e) {
+    console.log('Sync error:',e);
+    toast('Sync failed — check connection');
+  }
+  btn.textContent = '↻  Sync last 30 days';
+  btn.disabled = false;
+};
+
 window.exportCSV=function(){const hdr='Date,Type,Account,Category,Subcategory,Amount,Note';const rows=DB.map(r=>[r.date,r.type,r.account,r.category,r.subcategory,r.amount,'"'+(r.note||'')+'"'].join(','));const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent([hdr,...rows].join('\n'));a.download='MoneyManager_'+today()+'.csv';a.click();toast('CSV exported ✓');};
 </script>
 </body>
