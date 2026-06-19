@@ -979,6 +979,69 @@ function renderDash(){
   const bar6=[];let by=Y,bm=Mo;for(let i=0;i<6;i++){bar6.unshift({y:by,m:bm});bm--;if(bm===0){bm=12;by--;}}
   const dailyData=[];for(let d2=1;d2<=day;d2++){dailyData.push(DB.filter(r=>{const dt=new Date(r.date+'T00:00:00');return r.type==='Expense'&&r.category!=='Transfer'&&dt.getFullYear()===Y&&dt.getMonth()+1===Mo&&dt.getDate()===d2;}).reduce((s,r)=>s+r.amount,0));}
 
+  // ===== ANALYTICS & TREND DATA =====
+  // Build last 6 months list (oldest first) for trend charts
+  const trendMonths=[];{let ty=Y,tm=Mo;for(let i=0;i<6;i++){trendMonths.unshift({y:ty,m:tm});tm--;if(tm===0){tm=12;ty--;}}}
+  const trendLabels=trendMonths.map(({y,m})=>new Date(y,m-1,1).toLocaleString('en',{month:'short'}));
+
+  // Top categories overall (this month) used for trend area + insight
+  const insightCats=topMo.slice(0,4).map(([c])=>c);
+  // Category spend per month for stacked area
+  const catTrend={};insightCats.forEach(c=>{catTrend[c]=trendMonths.map(({y,m})=>DB.filter(r=>{const d=new Date(r.date+'T00:00:00');return r.type==='Expense'&&r.category===c&&d.getFullYear()===y&&d.getMonth()+1===m;}).reduce((s,r)=>s+r.amount,0));});
+
+  // SPENDING INSIGHT: compare this month's top category vs its 6-month average
+  let insightHTML='';
+  if(insightCats.length>0){
+    const topCat=insightCats[0];
+    const thisMonthCat=catMo[topCat]||0;
+    // 6-month average EXCLUDING current month
+    const prev6=[];{let ty=Y,tm=Mo;for(let i=0;i<6;i++){tm--;if(tm===0){tm=12;ty--;}prev6.push({y:ty,m:tm});}}
+    const prevVals=prev6.map(({y,m})=>DB.filter(r=>{const d=new Date(r.date+'T00:00:00');return r.type==='Expense'&&r.category===topCat&&d.getFullYear()===y&&d.getMonth()+1===m;}).reduce((s,r)=>s+r.amount,0));
+    const activePrev=prevVals.filter(v=>v>0);
+    const avgPrev=activePrev.length>0?activePrev.reduce((s,v)=>s+v,0)/activePrev.length:0;
+    if(avgPrev>0&&thisMonthCat>0){
+      const diff=Math.round((thisMonthCat-avgPrev)/avgPrev*100);
+      const up=diff>0;
+      const col=up?'var(--rd)':'var(--gn)';
+      const bgcol=up?'rgba(255,69,96,.07)':'rgba(0,214,143,.07)';
+      const bdcol=up?'rgba(255,69,96,.2)':'rgba(0,214,143,.2)';
+      const word=up?'more':'less';
+      if(Math.abs(diff)>=5){
+        insightHTML=`<div style="background:${bgcol};border:1px solid ${bdcol};border-radius:var(--rsm);padding:10px 14px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px"><span style="font-size:14px">&#x1F4A1;</span><span style="font-size:10px;font-weight:700;color:${col};text-transform:uppercase;letter-spacing:.5px">Spending insight</span></div>
+          <div style="font-size:12px;color:var(--g2)">You've spent <strong style="color:${col}">${Math.abs(diff)}% ${word}</strong> on <strong>${topCat}</strong> this month vs your 6-month average of ${pkr(Math.round(avgPrev))}</div>
+        </div>`;
+      }
+    }
+  }
+
+  // WEEKDAY PATTERN: average expense by weekday across all history
+  const wdTotals=[0,0,0,0,0,0,0],wdCounts=[0,0,0,0,0,0,0];
+  const wdSeen={};
+  DB.filter(r=>r.type==='Expense'&&r.category!=='Transfer').forEach(r=>{
+    const d=new Date(r.date+'T00:00:00');const dy=d.getDay();const idx=dy===0?6:dy-1;
+    wdTotals[idx]+=r.amount;
+    if(!wdSeen[r.date]){wdSeen[r.date]=idx;}
+  });
+  // Count distinct days per weekday for proper average
+  const wdDayCount=[0,0,0,0,0,0,0];
+  Object.values(wdSeen).forEach(idx=>wdDayCount[idx]++);
+  const wdAvg=wdTotals.map((t,i)=>wdDayCount[i]>0?Math.round(t/wdDayCount[i]):0);
+
+  // CATEGORY LEADERBOARD with rank movement vs last month
+  const lmCatTot={};DB.filter(r=>{const d=new Date(r.date+'T00:00:00');return r.type==='Expense'&&r.category!=='Transfer'&&d.getFullYear()===lmY&&d.getMonth()+1===lmMo;}).forEach(r=>{lmCatTot[r.category]=(lmCatTot[r.category]||0)+r.amount;});
+  const lmRank={};Object.entries(lmCatTot).sort((a,b)=>b[1]-a[1]).forEach(([c],i)=>{lmRank[c]=i+1;});
+  const leaderboard=topMo.slice(0,5).map(([c,a],i)=>{
+    const curRank=i+1;const prevRank=lmRank[c];
+    let move='new',moveColor='var(--bl)',moveIcon='&#9733;';
+    if(prevRank){
+      if(prevRank>curRank){move='up';moveColor='var(--gn)';moveIcon='&#9650;';}
+      else if(prevRank<curRank){move='down';moveColor='var(--rd)';moveIcon='&#9660;';}
+      else{move='same';moveColor='var(--g4)';moveIcon='&#8211;';}
+    }
+    return{c,a,curRank,move,moveColor,moveIcon};
+  });
+
   document.getElementById('dout').innerHTML=`
     <div class="sh" style="margin-top:0"><span>Month to date &middot; ${mName}</span><button onclick="sync30Days()" style="background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.2);border-radius:6px;padding:4px 10px;font-size:10px;font-weight:600;color:var(--gn);cursor:pointer;font-family:var(--f)">&#8635; Sync</button></div>
     <div class="kg">
@@ -1002,6 +1065,8 @@ function renderDash(){
       </div>
       <div style="font-size:11px;color:var(--g4);text-align:right">${daysLeft} days left &middot; ${pkr(mtdN)} remaining</div>
     </div>
+
+    ${insightHTML}
 
     <div class="sh"><span>Accounts</span></div>
     <div class="acc-grid">
@@ -1076,6 +1141,23 @@ function renderDash(){
     <div class="sh"><span>Monthly breakdown</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t"><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead><tbody>${mRows}</tbody></table></div></div>
 
+    <div class="sh"><span>Category leaderboard &middot; ${now.toLocaleString('en',{month:'long'})}</span><span class="sh-hint">rank vs last month</span></div>
+    <div class="card" style="padding:8px 14px">
+      ${leaderboard.map((it)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--bdr)">
+        <span style="font-size:13px;font-weight:700;color:var(--g3);min-width:18px">${it.curRank}</span>
+        <span style="flex:1;font-size:13px;color:var(--g1)">${it.c}</span>
+        <span style="font-size:11px;font-weight:600;color:${it.moveColor};min-width:36px;text-align:right">${it.moveIcon}${it.move==='up'||it.move==='down'?'':''}</span>
+        <span class="rd" style="font-size:12px;font-weight:600;min-width:70px;text-align:right">${pkr(it.a)}</span>
+      </div>`).join('')}
+      <div style="font-size:10px;color:var(--g4);padding-top:8px;text-align:center">&#9650; moved up &middot; &#9660; moved down &middot; &#9733; new &middot; &#8211; same</div>
+    </div>
+
+    <div class="sh"><span>Category trend &middot; last 6 months</span><span class="sh-hint">top 4 categories</span></div>
+    <div class="chart-card"><div class="chart-wrap" style="height:200px"><canvas id="ch-trend"></canvas></div></div>
+
+    <div class="sh"><span>Weekday spending pattern</span><span class="sh-hint">avg per day, all history</span></div>
+    <div class="chart-card"><div class="chart-wrap" style="height:180px"><canvas id="ch-weekday"></canvas></div></div>
+
     <div class="sh"><span>Yearly comparison</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t"><thead><tr><th>Year</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead><tbody>${yrRows}</tbody></table></div></div>`;
 
@@ -1097,6 +1179,21 @@ function renderDash(){
       mkChart('ch-pie',{type:'doughnut',data:{labels:topMo.map(([c])=>c),datasets:[{data:topMo.map(([,a])=>a),backgroundColor:CC.slice(0,topMo.length),borderWidth:2,borderColor:'var(--bg2)',hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.label+': ₨'+ctx.raw.toLocaleString()}}}}});
       const leg=document.getElementById('pie-leg');
       if(leg)leg.innerHTML=topMo.map(([c,a],i)=>`<div class="pl-row" onclick="openCatModal('${c.replace(/'/g,"\'")}',true)"><div class="pl-dot" style="background:${CC[i%CC.length]}"></div><div class="pl-name">${c}</div><div class="pl-pct">${totMoE>0?Math.round(a/totMoE*100):0}%</div></div>`).join('');
+    }
+
+    // CATEGORY TREND - stacked area chart
+    const trendEl=document.getElementById('ch-trend');
+    if(trendEl&&insightCats.length>0){
+      mkChart('ch-trend',{type:'line',data:{labels:trendLabels,datasets:insightCats.map((c,i)=>({label:c,data:catTrend[c],borderColor:CC[i%CC.length],backgroundColor:CC[i%CC.length]+'33',borderWidth:2,pointRadius:2,tension:.35,fill:true}))},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',labels:{color:'#FFB800',font:{family:'DM Sans',size:10},boxWidth:9,padding:8}},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.dataset.label+': ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{display:false},ticks:xTk},y:{grid:{color:gc},ticks:yTk}}}});
+    }
+
+    // WEEKDAY PATTERN - bar chart
+    const wdEl=document.getElementById('ch-weekday');
+    if(wdEl){
+      const wdLabels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+      const wdMax=Math.max(...wdAvg);
+      const wdColors=wdAvg.map(v=>v===wdMax&&wdMax>0?'rgba(255,69,96,.85)':'rgba(76,142,255,.6)');
+      mkChart('ch-weekday',{type:'bar',data:{labels:wdLabels,datasets:[{data:wdAvg,backgroundColor:wdColors,borderRadius:5,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' Avg ₨'+ctx.raw.toLocaleString()}}},scales:{x:{grid:{display:false},ticks:{color:'#FFB800',font:{family:'DM Sans',size:11}}},y:{grid:{color:gc},ticks:yTk}}}});
     }
   });
 }
