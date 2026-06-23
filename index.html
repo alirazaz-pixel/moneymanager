@@ -181,7 +181,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .rd2{font-size:13px;font-weight:500;color:var(--g1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm{font-size:11px;color:var(--g4);margin-top:2px}
 .ra{font-size:13px;font-weight:700;flex-shrink:0;font-variant-numeric:tabular-nums}
-.mr{display:grid;grid-template-columns:1fr 28px;gap:5px;align-items:start;margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
+.mr{display:grid;grid-template-columns:1fr 28px;gap:6px;align-items:start;margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
+.mr-fields{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .mtbar{background:rgba(76,142,255,.08);border:1px solid rgba(76,142,255,.15);border-radius:var(--rsm);padding:10px 14px;display:flex;justify-content:space-between;font-size:12px;color:var(--bl);font-weight:700;margin-top:8px}
 .spsi{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .spst{background:var(--bg3);border-radius:var(--rsm);padding:10px 12px;border:1px solid var(--bdr)}
@@ -189,7 +190,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 .spstv{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
 .pb{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-bottom:10px}
 .pf{height:100%;border-radius:3px;transition:width .3s,background .3s;width:0%;background:var(--gn)}
-.sprow{display:grid;grid-template-columns:1fr 28px;gap:5px;align-items:start;margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
+.sprow{display:grid;grid-template-columns:1fr 28px;gap:6px;align-items:start;margin-bottom:8px;padding:10px;background:var(--bg3);border-radius:var(--rsm);border:1px solid var(--bdr)}
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(10px);z-index:200;display:flex;align-items:flex-end;justify-content:center}
 .mb{background:var(--bg2);border-radius:20px 20px 0 0;border:1px solid var(--bdr2);border-bottom:none;padding:20px;width:100%;max-width:520px;box-shadow:var(--shmd);max-height:85vh;overflow-y:auto}
 .mbt{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;color:var(--g1)}
@@ -825,10 +826,17 @@ window.eTab=function(id,el){
 
 function xBtn(cls){return `<button onclick="this.closest('.${cls}').remove();${cls==='mr'?'calcMT':'calcSp'}()" style="background:rgba(255,69,96,.15);border:1px solid rgba(255,69,96,.25);border-radius:6px;color:var(--rd);font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;align-self:flex-end;flex-shrink:0">&times;</button>`;}
 
+let _mrId=0;
 window.addMR=function(){
   const d=document.createElement('div');d.className='mr';
   const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
-  d.innerHTML=`<div class="fl" style="grid-column:1/-1"><label style="font-size:9px">Category & Subcategory</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:5px"><select style="font-size:12px;padding:7px" onchange="mRowSub(this)"><option value="">Select...</option>${cats}</select><select class="msub" style="font-size:12px;padding:7px"><option value="">&mdash;</option></select></div></div><div class="fl"><label style="font-size:9px">Amount</label><input type="text" class="mamt" placeholder="0 or 100+50" oninput="calcMT()" style="font-size:12px;padding:7px" inputmode="decimal"></div><div class="fl" style="grid-column:span 1"><label style="font-size:9px">Note</label><input type="text" placeholder="Description" style="font-size:12px;padding:7px;width:100%"></div>${xBtn('mr')}`;
+  const rid='mr-nt-'+(_mrId++);
+  d.innerHTML=`<div class="mr-fields">
+    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%" onchange="mRowSub(this)"><option value="">Select...</option>${cats}</select></div>
+    <div class="fl"><label style="font-size:9px">Subcategory</label><select class="msub" style="font-size:12px;padding:7px;width:100%"><option value="">&mdash;</option></select></div>
+    <div class="fl"><label style="font-size:9px">Amount</label><input type="text" class="mamt" placeholder="0 or 100+50" oninput="calcMT()" style="font-size:12px;padding:7px;width:100%" inputmode="decimal"></div>
+    <div class="fl autocomplete-wrap"><label style="font-size:9px">Note</label><input type="text" class="mnote" placeholder="Description" autocomplete="off" style="font-size:12px;padding:7px;width:100%" oninput="acInput(this,'${rid}')" onkeydown="acKey(event,'${rid}')" onblur="setTimeout(()=>acHide('${rid}'),200)"><div class="autocomplete-list" id="${rid}"></div></div>
+  </div>${xBtn('mr')}`;
   document.getElementById('mrows').appendChild(d);
 };
 window.mRowSub=function(sel){const sub=sel.closest('.mr').querySelector('.msub');sub.innerHTML='<option value="">&mdash;</option>';(CAT_SUB[sel.value]||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);});};
@@ -836,7 +844,7 @@ function getInputAmt(el){const v=el.value.trim();try{const r=Function('"use stri
 window.calcMT=function(){let t=0;document.querySelectorAll('.mamt').forEach(i=>t+=getInputAmt(i));document.getElementById('mtot').textContent=pkr(t);};
 window.saveMulti=async function(){
   const dt=document.getElementById('m-dt').value,ac=document.getElementById('m-ac').value,recs=[];
-  document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select'),ii=row.querySelectorAll('input');const ct=ss[0].value,sb=ss[1].value,am=getInputAmt(ii[0]),nt=ii[1].value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt});});
+  document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select');const ct=ss[0].value,sb=ss[1].value,am=getInputAmt(row.querySelector('.mamt')),nt=row.querySelector('.mnote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
   recs.forEach(r=>DB.unshift(r));
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
@@ -848,20 +856,16 @@ window.saveMulti=async function(){
   hideSync();
 };
 
+let _srId=0;
 window.addSR=function(){
   const d=document.createElement('div');d.className='sprow';
   const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
-  d.innerHTML=`
-    <div class="fl" style="grid-column:1/-1"><label style="font-size:9px">Category</label>
-      <select style="font-size:12px;padding:7px;width:100%"><option value="">Select...</option>${cats}</select>
-    </div>
-    <div class="fl"><label style="font-size:9px">Amount</label>
-      <input type="number" class="samt" min="0" placeholder="0" oninput="calcSp()" style="font-size:12px;padding:7px;width:100%" inputmode="numeric">
-    </div>
-    <div class="fl" style="grid-column:1/-1"><label style="font-size:9px">Note</label>
-      <input type="text" placeholder="Description" style="font-size:12px;padding:7px;width:100%">
-    </div>
-    ${xBtn('sprow')}`;
+  const rid='sr-nt-'+(_srId++);
+  d.innerHTML=`<div class="mr-fields">
+    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%"><option value="">Select...</option>${cats}</select></div>
+    <div class="fl"><label style="font-size:9px">Amount</label><input type="number" class="samt" min="0" placeholder="0" oninput="calcSp()" style="font-size:12px;padding:7px;width:100%" inputmode="numeric"></div>
+    <div class="fl autocomplete-wrap" style="grid-column:1/-1"><label style="font-size:9px">Note</label><input type="text" class="snote" placeholder="Description" autocomplete="off" style="font-size:12px;padding:7px;width:100%" oninput="acInput(this,'${rid}')" onkeydown="acKey(event,'${rid}')" onblur="setTimeout(()=>acHide('${rid}'),200)"><div class="autocomplete-list" id="${rid}"></div></div>
+  </div>${xBtn('sprow')}`;
   document.getElementById('sprows').appendChild(d);
 };
 window.calcSp=function(){
@@ -875,7 +879,7 @@ window.calcSp=function(){
 };
 window.saveSplit=async function(){
   const dt=document.getElementById('sp-dt').value,recs=[];
-  document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,ii=row.querySelectorAll('input'),nt=ii[0].value.trim(),am=parseFloat(ii[1].value);if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt});});
+  document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,am=parseFloat(row.querySelector('.samt').value),nt=row.querySelector('.snote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt});});
   if(!recs.length){toast('No valid entries');return;}
   recs.forEach(r=>DB.unshift(r));
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
