@@ -718,7 +718,7 @@ window.importNewRecords = async function(){
 };
 
 window.onload = () => {
-  fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
+  fillCatSel('s-ct');fillCatSel('e-ct');fillCatSelPlain('mf');fillCatSelPlain('mi');
   setDates();
   document.getElementById('mf').addEventListener('change',mPrev);
   document.getElementById('mi').addEventListener('change',mPrev);
@@ -757,6 +757,12 @@ function getAmtVal(id){const v=document.getElementById(id).value.trim();
   return parseFloat(v)||0;}
 
 function fillCatSel(id){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';Object.keys(CAT_SUB).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});const addOpt=document.createElement('option');addOpt.value='__add_new__';addOpt.textContent='+ Add new category...';addOpt.style.color='var(--gn)';s.appendChild(addOpt);}
+function fillCatSelPlain(id){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';Object.keys(CAT_SUB).sort().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);});}
+function rebuildCatOptions(sel,selectedVal){
+  const cats=Object.keys(CAT_SUB).sort().map(c=>`<option>${c}</option>`).join('');
+  sel.innerHTML=`<option value="">Select...</option>${cats}<option value="__add_new__" style="color:var(--gn)">+ Add new category...</option>`;
+  if(selectedVal)sel.value=selectedVal;
+}
 window.fillSubs=function(id,cat){const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">Select...</option>';(CAT_SUB[cat]||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;s.appendChild(o);});if(cat){const addOpt=document.createElement('option');addOpt.value='__add_sub__';addOpt.textContent='+ Add new subcategory...';addOpt.style.color='var(--gn)';s.appendChild(addOpt);}};
 
 // Handle add new category/subcategory from dropdown
@@ -866,14 +872,55 @@ window.addMR=function(){
   const rid='mr-nt-'+(_mrId++);
   const aid='mr-amt-'+_mrId, apid='mr-ampv-'+_mrId;
   d.innerHTML=`<div class="mr-fields">
-    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%" onchange="mRowSub(this)"><option value="">Select...</option>${cats}</select></div>
-    <div class="fl"><label style="font-size:9px">Subcategory</label><select class="msub" style="font-size:12px;padding:7px;width:100%"><option value="">&mdash;</option></select></div>
+    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%" onchange="mRowCatChange(this)"><option value="">Select...</option>${cats}<option value="__add_new__" style="color:var(--gn)">+ Add new category...</option></select></div>
+    <div class="fl"><label style="font-size:9px">Subcategory</label><select class="msub" onchange="mRowSubChange(this)" style="font-size:12px;padding:7px;width:100%"><option value="">&mdash;</option></select></div>
     <div class="fl"><label style="font-size:9px">Amount</label><input type="text" id="${aid}" class="mamt" placeholder="0 or 100+50" oninput="calcPreview('${aid}','${apid}','calcMT');calcMT()" style="font-size:12px;padding:7px;width:100%" inputmode="decimal"><div class="calc-preview" id="${apid}"></div></div>
     <div class="fl autocomplete-wrap"><label style="font-size:9px">Note</label><input type="text" id="${rid}-inp" class="mnote" placeholder="Description" autocomplete="off" style="font-size:12px;padding:7px;width:100%" oninput="acInput(this,'${rid}')" onkeydown="acKey(event,'${rid}')" onblur="setTimeout(()=>acHide('${rid}'),200)"><div class="autocomplete-list" id="${rid}"></div></div>
   </div>${xBtn('mr')}`;
   document.getElementById('mrows').appendChild(d);
 };
-window.mRowSub=function(sel){const sub=sel.closest('.mr').querySelector('.msub');sub.innerHTML='<option value="">&mdash;</option>';(CAT_SUB[sel.value]||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);});};
+window.mRowSub=function(sel){const sub=sel.closest('.mr').querySelector('.msub');sub.innerHTML='<option value="">&mdash;</option>';(CAT_SUB[sel.value]||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;sub.appendChild(o);});if(sel.value){const addOpt=document.createElement('option');addOpt.value='__add_sub__';addOpt.textContent='+ Add new subcategory...';addOpt.style.color='var(--gn)';sub.appendChild(addOpt);}};
+window.mRowCatChange=function(sel){
+  const val=sel.value;
+  if(val==='__add_new__'){
+    const n=prompt('New category name:');
+    if(n&&n.trim()){
+      const nn=n.trim();
+      if(!CAT_SUB[nn]){CAT_SUB[nn]=[];toast('"'+nn+'" added ✓');}
+      rebuildCatOptions(sel,nn);
+    }else{sel.value='';}
+  }
+  mRowSub(sel);
+};
+window.mRowSubChange=function(sel){
+  const val=sel.value;
+  if(val==='__add_sub__'){
+    const row=sel.closest('.mr');
+    const catSel=row.querySelector('select');
+    const cat=catSel.value;
+    if(!cat){toast('Select a category first');sel.value='';return;}
+    const n=prompt('New subcategory for "'+cat+'":');
+    if(n&&n.trim()){
+      const nn=n.trim();
+      if(!CAT_SUB[cat])CAT_SUB[cat]=[];
+      if(!CAT_SUB[cat].includes(nn)){CAT_SUB[cat].push(nn);CAT_SUB[cat].sort();}
+      mRowSub(catSel);
+      sel.value=nn;
+      toast('"'+nn+'" added ✓');
+    }else{sel.value='';}
+  }
+};
+window.srRowCatChange=function(sel){
+  const val=sel.value;
+  if(val==='__add_new__'){
+    const n=prompt('New category name:');
+    if(n&&n.trim()){
+      const nn=n.trim();
+      if(!CAT_SUB[nn]){CAT_SUB[nn]=[];toast('"'+nn+'" added ✓');}
+      rebuildCatOptions(sel,nn);
+    }else{sel.value='';}
+  }
+};
 function getInputAmt(el){const v=el.value.trim();try{const r=Function('"use strict";return ('+v.replace(/[^0-9+\-*\/\.\(\)]/g,'')+') ')();if(!isNaN(r)&&isFinite(r))return r;}catch(e){}return parseFloat(v)||0;}
 window.calcMT=function(){let t=0;document.querySelectorAll('.mamt').forEach(i=>t+=getInputAmt(i));document.getElementById('mtot').textContent=pkr(t);};
 window.saveMulti=async function(){
@@ -897,7 +944,7 @@ window.addSR=function(){
   const rid='sr-nt-'+(_srId++);
   const aid='sr-amt-'+_srId, apid='sr-ampv-'+_srId;
   d.innerHTML=`<div class="mr-fields">
-    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%"><option value="">Select...</option>${cats}</select></div>
+    <div class="fl"><label style="font-size:9px">Category</label><select style="font-size:12px;padding:7px;width:100%" onchange="srRowCatChange(this)"><option value="">Select...</option>${cats}<option value="__add_new__" style="color:var(--gn)">+ Add new category...</option></select></div>
     <div class="fl"><label style="font-size:9px">Amount</label><input type="text" id="${aid}" class="samt" placeholder="0 or 100+50" oninput="calcPreview('${aid}','${apid}','calcSp');calcSp()" style="font-size:12px;padding:7px;width:100%" inputmode="decimal"><div class="calc-preview" id="${apid}"></div></div>
     <div class="fl autocomplete-wrap" style="grid-column:1/-1"><label style="font-size:9px">Note</label><input type="text" id="${rid}-inp" class="snote" placeholder="Description" autocomplete="off" style="font-size:12px;padding:7px;width:100%" oninput="acInput(this,'${rid}')" onkeydown="acKey(event,'${rid}')" onblur="setTimeout(()=>acHide('${rid}'),200)"><div class="autocomplete-list" id="${rid}"></div></div>
   </div>${xBtn('sprow')}`;
@@ -1386,16 +1433,16 @@ function renderCats(){
     </div>`;
   }).join('');
 }
-window.renameCat=function(cat){const n=prompt('Rename "'+cat+'" to:',cat);if(!n||!n.trim()||n.trim()===cat)return;const nn=n.trim();DB.forEach(r=>{if(r.category===cat)r.category=nn;});if(CAT_SUB[cat]){CAT_SUB[nn]=CAT_SUB[cat];delete CAT_SUB[cat];}toast('"'+cat+'" renamed ✓');renderCats();fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');};
+window.renameCat=function(cat){const n=prompt('Rename "'+cat+'" to:',cat);if(!n||!n.trim()||n.trim()===cat)return;const nn=n.trim();DB.forEach(r=>{if(r.category===cat)r.category=nn;});if(CAT_SUB[cat]){CAT_SUB[nn]=CAT_SUB[cat];delete CAT_SUB[cat];}toast('"'+cat+'" renamed ✓');renderCats();fillCatSel('s-ct');fillCatSel('e-ct');fillCatSelPlain('mf');fillCatSelPlain('mi');};
 function mPrev(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;const p=document.getElementById('mprev');if(f&&i&&f!==i){const fc=DB.filter(r=>r.category===f).length,ic=DB.filter(r=>r.category===i).length;p.style.display='block';p.innerHTML=`<strong>${fc}</strong> records from <strong>${f}</strong> &rarr; <strong>${i}</strong> (${ic} records)`;}else p.style.display='none';}
-window.mergeCats=function(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;if(!f||!i||f===i){toast('Select two different categories');return;}DB.forEach(r=>{if(r.category===f)r.category=i;});if(CAT_SUB[f]){CAT_SUB[i]=[...new Set([...(CAT_SUB[i]||[]),...CAT_SUB[f]])].sort();delete CAT_SUB[f];}toast('"'+f+'" merged ✓');renderCats();fillCatSel('s-ct');fillCatSel('mf');fillCatSel('mi');};
+window.mergeCats=function(){const f=document.getElementById('mf').value,i=document.getElementById('mi').value;if(!f||!i||f===i){toast('Select two different categories');return;}DB.forEach(r=>{if(r.category===f)r.category=i;});if(CAT_SUB[f]){CAT_SUB[i]=[...new Set([...(CAT_SUB[i]||[]),...CAT_SUB[f]])].sort();delete CAT_SUB[f];}toast('"'+f+'" merged ✓');renderCats();fillCatSel('s-ct');fillCatSelPlain('mf');fillCatSelPlain('mi');};
 window.deleteCat=function(cat){
   const recs=DB.filter(r=>r.category===cat);
   if(recs.length===0){
     // No records - just delete
     if(CAT_SUB[cat])delete CAT_SUB[cat];
     toast('"'+cat+'" deleted ✓');renderCats();
-    fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
+    fillCatSel('s-ct');fillCatSel('e-ct');fillCatSelPlain('mf');fillCatSelPlain('mi');
     return;
   }
   // Has records - show count and ask where to move
@@ -1417,7 +1464,7 @@ window.deleteCat=function(cat){
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
   toast(moved+' records moved to "'+match+'" ✓');
   renderCats();renderDash();
-  fillCatSel('s-ct');fillCatSel('e-ct');fillCatSel('mf');fillCatSel('mi');
+  fillCatSel('s-ct');fillCatSel('e-ct');fillCatSelPlain('mf');fillCatSelPlain('mi');
 };
 
 window.addCat=function(){const n=document.getElementById('newcat').value.trim();if(!n){toast('Enter a name');return;}if(CAT_SUB[n]){toast('Already exists');return;}CAT_SUB[n]=[];fillCatSel('s-ct');fillCatSel('e-ct');document.getElementById('newcat').value='';toast('"'+n+'" added ✓');renderCats();};
