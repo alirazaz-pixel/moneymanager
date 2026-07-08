@@ -1177,6 +1177,16 @@ function renderDash(){
 
     ${insightHTML}
 
+    <div class="sh"><span>Category lookup</span><span class="sh-hint">any category, any time period</span></div>
+    <div class="card">
+      <div class="sb2" style="margin-bottom:0">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--g4)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="cat-lookup" placeholder="e.g. Bank Charges, Food, Car Expense..." oninput="filterCatLookup()">
+        <button class="clr" onclick="document.getElementById('cat-lookup').value='';filterCatLookup()">&times;</button>
+      </div>
+      <div id="cat-lookup-results" style="margin-top:4px"></div>
+    </div>
+
     <div class="sh"><span>Accounts</span></div>
     <div class="acc-grid">
       <div class="acc-card">
@@ -1307,6 +1317,24 @@ function renderDash(){
   });
 }
 
+window.filterCatLookup=function(){
+  const q=document.getElementById('cat-lookup').value.trim().toLowerCase();
+  const el=document.getElementById('cat-lookup-results');
+  if(!q){el.innerHTML='';return;}
+  const allCats=Object.keys(CAT_SUB).length>0?Object.keys(CAT_SUB):[...new Set(DB.map(r=>r.category))];
+  const matches=allCats.filter(c=>c.toLowerCase().includes(q)).sort((a,b)=>a.localeCompare(b)).slice(0,8);
+  if(matches.length===0){el.innerHTML=`<div style="padding:10px 0;font-size:12px;color:var(--g4)">No category matches "${q}"</div>`;return;}
+  el.innerHTML=matches.map(c=>{
+    const recs=DB.filter(r=>r.type==='Expense'&&r.category===c);
+    const total=recs.reduce((s,r)=>s+r.amount,0);
+    const cs=c.replace(/'/g,"\'");
+    return`<div class="rr" style="cursor:pointer;padding:9px 0" onclick="openCatModal('${cs}','month')">
+      <span style="flex:1;font-size:13px;color:var(--g1)">${c}</span>
+      <span style="font-size:11px;color:var(--g4);margin-right:8px">${recs.length} txns</span>
+      <span class="rd" style="font-size:12px;font-weight:600">${pkr(total)}</span>
+    </div>`;
+  }).join('');
+};
 window.openCatModal=function(cat,scope='month',filterSub=null,pY=null,pMo=null){
   const now=new Date();
   const Y=pY!==null?pY:now.getFullYear();
