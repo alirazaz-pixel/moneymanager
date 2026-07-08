@@ -417,7 +417,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
       <button class="tab" onclick="cTab('merge',this)">Merge</button>
       <button class="tab" onclick="cTab('add',this)">Add new</button>
     </div>
-    <div id="ct-list"><div id="catbody"></div></div>
+    <div id="ct-list"><div style="font-size:11px;color:var(--g4);margin-bottom:10px">Tap any category to see its month, year, or all-time total — including a breakdown by subcategory.</div><div id="catbody"></div></div>
     <div id="ct-merge" style="display:none">
       <div class="fg x1" style="margin-bottom:10px"><div class="fl"><label>Merge FROM</label><select id="mf"><option value="">Select...</option></select></div></div>
       <div class="fg x1" style="margin-bottom:10px"><div class="fl"><label>Merge INTO</label><select id="mi"><option value="">Select...</option></select></div></div>
@@ -512,7 +512,8 @@ button,input,select{font-family:var(--f);cursor:pointer}
   <div class="mb" style="max-height:85vh">
     <div class="mbt"><span id="cat-mo-title">Category</span><button class="mclose" onclick="closeCatMo()">&times;</button></div>
     <div id="cat-mo-stats" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap"></div>
-    <div id="cat-mo-subtabs" style="display:none;margin-bottom:12px"></div>
+    <div id="cat-mo-scope" style="display:flex;gap:6px;margin-bottom:12px"></div>
+    <div id="cat-mo-subtabs" style="display:none;margin-bottom:14px"></div>
     <div class="tw"><table class="t">
       <thead><tr><th>Date</th><th>Subcategory</th><th>Note</th><th>Amount</th></tr></thead>
       <tbody id="cat-mo-body"></tbody>
@@ -1238,13 +1239,13 @@ function renderDash(){
         <div class="pie-legend" id="pie-leg"></div>
       </div>
       <div style="border-top:1px solid var(--bdr);padding-top:12px;margin-top:12px">
-        ${topMo.map(([c,a],i)=>{const pct=totMoE>0?Math.round(a/totMoE*100):0;const col=CC[i%CC.length];const cs=c.replace(/'/g,"\'");return`<div class="rr" onclick="openCatModal('${cs}',true,null,${Y},${Mo})" style="cursor:pointer;padding:8px 0"><span class="cat-badge" style="background:${col};color:#000">${pct}%</span><span style="flex:1;font-size:13px;color:var(--g1)">${c}</span><span class="rd" style="font-size:12px;font-weight:600">${pkr(a)}</span></div>`;}).join('')}
+        ${topMo.map(([c,a],i)=>{const pct=totMoE>0?Math.round(a/totMoE*100):0;const col=CC[i%CC.length];const cs=c.replace(/'/g,"\'");return`<div class="rr" onclick="openCatModal('${cs}','month',null,${Y},${Mo})" style="cursor:pointer;padding:8px 0"><span class="cat-badge" style="background:${col};color:#000">${pct}%</span><span style="flex:1;font-size:13px;color:var(--g1)">${c}</span><span class="rd" style="font-size:12px;font-weight:600">${pkr(a)}</span></div>`;}).join('')}
       </div>
     </div>
 
     <div class="sh"><span>Top expenses &middot; all time</span><span class="sh-hint">tap for details</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t"><thead><tr><th>Category</th><th>Txns</th><th>Amount</th></tr></thead>
-    <tbody>${topAll.map(([c,a])=>{const cnt=DB.filter(r=>r.type==='Expense'&&r.category===c).length;const cs=c.replace(/'/g,"\'");return`<tr class="cl" onclick="openCatModal('${cs}',false)"><td class="gn" style="font-weight:600">${c} <span style="opacity:.3;font-size:10px">&#8599;</span></td><td style="text-align:center;color:var(--g4)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;}).join('')}</tbody></table></div></div>
+    <tbody>${topAll.map(([c,a])=>{const cnt=DB.filter(r=>r.type==='Expense'&&r.category===c).length;const cs=c.replace(/'/g,"\'");return`<tr class="cl" onclick="openCatModal('${cs}','all')"><td class="gn" style="font-weight:600">${c} <span style="opacity:.3;font-size:10px">&#8599;</span></td><td style="text-align:center;color:var(--g4)">${cnt}</td><td class="te">${pkr(a)}</td></tr>`;}).join('')}</tbody></table></div></div>
 
     <div class="sh"><span>Monthly breakdown</span></div>
     <div class="card" style="padding:0;overflow:hidden"><div class="tw"><table class="t"><thead><tr><th>Month</th><th>Income</th><th>Expense</th><th>Net</th></tr></thead><tbody>${mRows}</tbody></table></div></div>
@@ -1286,7 +1287,7 @@ function renderDash(){
     if(pieEl&&topMo.length>0){
       mkChart('ch-pie',{type:'doughnut',data:{labels:topMo.map(([c])=>c),datasets:[{data:topMo.map(([,a])=>a),backgroundColor:CC.slice(0,topMo.length),borderWidth:2,borderColor:'var(--bg2)',hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'55%',plugins:{legend:{display:false},tooltip:{...tt,callbacks:{label:ctx=>' '+ctx.label+': ₨'+ctx.raw.toLocaleString()}}}}});
       const leg=document.getElementById('pie-leg');
-      if(leg)leg.innerHTML=topMo.map(([c,a],i)=>`<div class="pl-row" onclick="openCatModal('${c.replace(/'/g,"\'")}',true,null,${Y},${Mo})"><div class="pl-dot" style="background:${CC[i%CC.length]}"></div><div class="pl-name">${c}</div><div class="pl-pct">${totMoE>0?Math.round(a/totMoE*100):0}%</div></div>`).join('');
+      if(leg)leg.innerHTML=topMo.map(([c,a],i)=>`<div class="pl-row" onclick="openCatModal('${c.replace(/'/g,"\'")}','month',null,${Y},${Mo})"><div class="pl-dot" style="background:${CC[i%CC.length]}"></div><div class="pl-name">${c}</div><div class="pl-pct">${totMoE>0?Math.round(a/totMoE*100):0}%</div></div>`).join('');
     }
 
     // CATEGORY TREND - stacked area chart
@@ -1306,27 +1307,57 @@ function renderDash(){
   });
 }
 
-window.openCatModal=function(cat,monthOnly,filterSub=null,pY=null,pMo=null){
+window.openCatModal=function(cat,scope='month',filterSub=null,pY=null,pMo=null){
   const now=new Date();
   const Y=pY!==null?pY:now.getFullYear();
   const Mo=pMo!==null?pMo:now.getMonth()+1;
-  let recs=DB.filter(r=>r.type==='Expense'&&r.category===cat);
-  if(monthOnly)recs=recs.filter(r=>{const d=new Date(r.date+'T00:00:00');return d.getFullYear()===Y&&d.getMonth()+1===Mo;});
+  function inScope(r){
+    if(scope==='all')return true;
+    const d=new Date(r.date+'T00:00:00');
+    if(scope==='year')return d.getFullYear()===Y;
+    return d.getFullYear()===Y&&d.getMonth()+1===Mo; // month
+  }
+  let recs=DB.filter(r=>r.type==='Expense'&&r.category===cat&&inScope(r));
   if(filterSub)recs=recs.filter(r=>r.subcategory===filterSub);
   recs.sort((a,b)=>b.date.localeCompare(a.date));
   const total=recs.reduce((s,r)=>s+r.amount,0),avg=recs.length>0?Math.round(total/recs.length):0;
   const mName=new Date(Y,Mo-1,1).toLocaleString('en',{month:'long'})+' '+Y;
-  document.getElementById('cat-mo-title').textContent=cat+(filterSub?'·'+filterSub:'')+(monthOnly?'·'+mName:'·All Time');
+  const scopeLabel=scope==='month'?mName:scope==='year'?String(Y):'All Time';
+  document.getElementById('cat-mo-title').textContent=cat+(filterSub?' · '+filterSub:'')+' · '+scopeLabel;
   document.getElementById('cat-mo-stats').innerHTML=`<div class="st" style="flex:1;min-width:90px"><div class="stl">Total</div><div class="stv rd">${pkr(total)}</div></div><div class="st" style="flex:1;min-width:90px"><div class="stl">Transactions</div><div class="stv bl">${recs.length.toLocaleString()}</div></div><div class="st" style="flex:1;min-width:90px"><div class="stl">Average</div><div class="stv am">${pkr(avg)}</div></div>`;
-  let allRecs=DB.filter(r=>r.type==='Expense'&&r.category===cat);
-  if(monthOnly)allRecs=allRecs.filter(r=>{const d=new Date(r.date+'T00:00:00');return d.getFullYear()===Y&&d.getMonth()+1===Mo;});
-  const subs=[...new Set(allRecs.map(r=>r.subcategory).filter(s=>s))];
+
+  // Scope switcher — This Month / This Year / All Time
+  document.getElementById('cat-mo-scope').innerHTML=`
+    <button class="pill ${scope==='month'?'on':''}" onclick="openCatModal('${cat}','month',null,${Y},${Mo})">This Month</button>
+    <button class="pill ${scope==='year'?'on':''}" onclick="openCatModal('${cat}','year',null,${Y},${Mo})">This Year</button>
+    <button class="pill ${scope==='all'?'on':''}" onclick="openCatModal('${cat}','all',null,${Y},${Mo})">All Time</button>`;
+
+  // Subcategory breakdown with amounts, for the current scope (independent of active filterSub)
+  const scopeRecs=DB.filter(r=>r.type==='Expense'&&r.category===cat&&inScope(r));
+  const scopeTotal=scopeRecs.reduce((s,r)=>s+r.amount,0);
+  const subTotals={};
+  scopeRecs.forEach(r=>{const key=r.subcategory||'';if(key)subTotals[key]=(subTotals[key]||0)+r.amount;});
+  const blankTotal=scopeRecs.filter(r=>!r.subcategory).reduce((s,r)=>s+r.amount,0);
+  const subEntries=Object.entries(subTotals).sort((a,b)=>b[1]-a[1]);
   const subtabs=document.getElementById('cat-mo-subtabs');
-  if(subs.length>0){
-    subtabs.style.display='flex';subtabs.style.flexWrap='wrap';subtabs.style.gap='6px';
-    subtabs.innerHTML=`<button class="pill ${!filterSub?'on':''}" onclick="openCatModal('${cat}',${monthOnly},null,${Y},${Mo})">All</button>`+
-      subs.map(s=>`<button class="pill ${filterSub===s?'on':''}" onclick="openCatModal('${cat}',${monthOnly},'${s.replace(/'/g,"\'")}',${Y},${Mo})">${s}</button>`).join('');
-  }else subtabs.style.display='none';
+  if(subEntries.length>0||blankTotal>0){
+    subtabs.style.display='block';
+    let html=`<div style="font-size:10px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Subcategory breakdown &middot; ${scopeLabel}</div>`;
+    if(filterSub){html+=`<button class="pill on" onclick="openCatModal('${cat}','${scope}',null,${Y},${Mo})" style="margin-bottom:8px">&larr; Showing: ${filterSub} (tap to clear)</button>`;}
+    html+=subEntries.map(([s,amt])=>{
+      const pct=scopeTotal>0?Math.round(amt/scopeTotal*100):0;
+      const sEsc=s.replace(/'/g,"\'");
+      const active=filterSub===s;
+      return`<div class="rr" style="cursor:pointer;padding:7px 0" onclick="openCatModal('${cat}','${scope}','${sEsc}',${Y},${Mo})">
+        <span class="cat-badge" style="background:${active?'var(--gn)':'var(--bg4)'};color:${active?'#000':'var(--g3)'};min-width:32px">${pct}%</span>
+        <span style="flex:1;font-size:12px;color:${active?'var(--gn)':'var(--g1)'}">${s}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--rd)">${pkr(amt)}</span>
+      </div>`;
+    }).join('');
+    if(blankTotal>0){html+=`<div class="rr" style="padding:7px 0"><span class="cat-badge" style="background:var(--bg4);color:var(--g3);min-width:32px">${scopeTotal>0?Math.round(blankTotal/scopeTotal*100):0}%</span><span style="flex:1;font-size:12px;color:var(--g4)">No subcategory</span><span style="font-size:12px;font-weight:600;color:var(--rd)">${pkr(blankTotal)}</span></div>`;}
+    subtabs.innerHTML=html;
+  }else{subtabs.style.display='none';}
+
   document.getElementById('cat-mo-body').innerHTML=recs.length===0?'<tr><td colspan="4" style="text-align:center;color:var(--g4);padding:20px">No records</td></tr>':recs.map(r=>`<tr><td style="white-space:nowrap;font-size:11px;color:var(--g3)">${fmtD(r.date)}</td><td style="font-size:11px;color:var(--g4)">${r.subcategory||'—'}</td><td style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${r.note||'—'}</td><td class="te">${pkr(r.amount)}</td></tr>`).join('');
   document.getElementById('cat-mo').style.display='flex';
 };
@@ -1421,12 +1452,12 @@ function renderCats(){
   DB.forEach(r=>{if(!tots[r.category])tots[r.category]={c:0,t:0};tots[r.category].c++;tots[r.category].t+=r.amount;});
   document.getElementById('catbody').innerHTML=Object.entries(tots).sort((a,b)=>b[1].t-a[1].t).map(([c,d])=>{
     const cs=c.replace(/'/g,"\'");
-    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--rsm);border:1px solid var(--bdr);margin-bottom:6px;background:var(--bg3)">
+    return`<div onclick="openCatModal('${cs}','month')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:var(--rsm);border:1px solid var(--bdr);margin-bottom:6px;background:var(--bg3)">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500;color:var(--g1)">${c}</div>
-        <div style="font-size:11px;color:var(--g4)">${d.c.toLocaleString()} records &middot; ${pkr(d.t)}</div>
+        <div style="font-size:11px;color:var(--g4)">${d.c.toLocaleString()} records &middot; ${pkr(d.t)} all-time</div>
       </div>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
         <button class="btn bg bsm" onclick="renameCat('${cs}')">Rename</button>
         <button class="btn bg bsm" onclick="deleteCat('${cs}')" style="color:var(--rd);border-color:rgba(255,69,96,.3)">Delete</button>
       </div>
