@@ -253,7 +253,7 @@ button,input,select{font-family:var(--f);cursor:pointer}
 </div>
 <nav class="nav">
   <span class="logo"><span class="logo-ic">&#x1F4B0;</span>Money Manager<small>&#x20A8; PKR</small></span>
-  <button class="ntab on" onclick="go('dash',this)"><span class="nav-label">Dashboard</span><span class="nav-icon" style="display:none">&#x1F3E0;</span></button>
+  <button class="ntab on" id="nav-dash" onclick="go('dash',this)"><span class="nav-label">Dashboard</span><span class="nav-icon" style="display:none">&#x1F3E0;</span></button>
   <button class="ntab" onclick="go('entry',this)"><span class="nav-label">+ Add</span><span class="nav-icon" style="display:none">+</span></button>
   <button class="ntab" onclick="go('recs',this)"><span class="nav-label">Records</span><span class="nav-icon" style="display:none">&#x1F4CB;</span></button>
   <button class="ntab" onclick="go('cats',this)"><span class="nav-label">Categories</span><span class="nav-icon" style="display:none">&#x1F4C2;</span></button>
@@ -725,7 +725,7 @@ function startRealtimeListener(){
       const recent=snap.docs.map(d=>({...d.data(),_id:d.id}));
       const old=DB.filter(r=>r.date<cutoff);
       DB=[...recent,...old];
-      DB.sort((a,b)=>b.date.localeCompare(a.date));
+      DB.sort((a,b)=>{const dc=b.date.localeCompare(a.date);return dc!==0?dc:(b._ts||0)-(a._ts||0);});
       try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
       document.getElementById('rcount2').textContent=DB.length.toLocaleString()+' records';
       document.getElementById('lastsync').textContent=new Date().toLocaleTimeString();
@@ -794,6 +794,7 @@ window.go=function(id,el){
   if(id==='recs'){rOff=0;renderPills();renderRecs(true);}
   if(id==='cats')renderCats();
 };
+window.goDash=function(){const el=document.getElementById('nav-dash');if(el)go('dash',el);};
 window.closeMo=()=>document.getElementById('edit-mo').style.display='none';
 window.closeCatMo=()=>document.getElementById('cat-mo').style.display='none';
 window.clrS=()=>{document.getElementById('srch').value='';renderRecs(true);};
@@ -869,10 +870,11 @@ window.saveSingle=async function(){
     const to=document.getElementById('s-to').value;
     if(fr===to){toast('From and To must be different');return;}
     // Save as expense from source + income to dest, both category=Transfer (excluded from MTD)
-    const expRec={date:dt,type:'Expense',account:fr,category:'Transfer',subcategory:'To '+to,amount:am,note:nt||'Transfer to '+to};
-    const incRec={date:dt,type:'Income',account:to,category:'Transfer',subcategory:'From '+fr,amount:am,note:nt||'Transfer from '+fr};
+    const _now=Date.now();
+    const expRec={date:dt,type:'Expense',account:fr,category:'Transfer',subcategory:'To '+to,amount:am,note:nt||'Transfer to '+to,_ts:_now};
+    const incRec={date:dt,type:'Income',account:to,category:'Transfer',subcategory:'From '+fr,amount:am,note:nt||'Transfer from '+fr,_ts:_now+1};
     const id1=await saveToDB(expRec);const id2=await saveToDB(incRec);
-    if(id1&&id2){document.getElementById('s-am').value='';document.getElementById('s-nt').value='';document.getElementById('s-am-prev').textContent='';toast('Transfer saved ✓');}
+    if(id1&&id2){document.getElementById('s-am').value='';document.getElementById('s-nt').value='';document.getElementById('s-am-prev').textContent='';toast('Transfer saved ✓');goDash();}
     else toast('Error saving transfer');
     return;
   }
@@ -891,6 +893,7 @@ window.saveSingle=async function(){
   document.getElementById('s-am-prev').textContent='';
   renderRecent();renderDash();
   toast('Saved ✓');
+  goDash();
   // Save to Firebase
   const id=await saveToDB(rec);
   if(id)rec._id=id;
@@ -972,13 +975,15 @@ function getInputAmt(el){const v=el.value.trim();try{const r=Function('"use stri
 window.calcMT=function(){let t=0;document.querySelectorAll('.mamt').forEach(i=>t+=getInputAmt(i));document.getElementById('mtot').textContent=pkr(t);};
 window.saveMulti=async function(){
   const dt=document.getElementById('m-dt').value,ac=document.getElementById('m-ac').value,recs=[];
-  document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select');const ct=ss[0].value,sb=ss[1].value,am=getInputAmt(row.querySelector('.mamt')),nt=row.querySelector('.mnote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt});});
+  const _base=Date.now();let _i=0;
+  document.querySelectorAll('.mr').forEach(row=>{const ss=row.querySelectorAll('select');const ct=ss[0].value,sb=ss[1].value,am=getInputAmt(row.querySelector('.mamt')),nt=row.querySelector('.mnote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:ac,category:ct,subcategory:sb,amount:am,note:nt,_ts:_base+(_i++)});});
   if(!recs.length){toast('No valid entries');return;}
   recs.forEach(r=>DB.unshift(r));
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
   renderDash();renderRecent();
   document.getElementById('mrows').innerHTML='';addMR();addMR();addMR();calcMT();
   toast(recs.length+' entries saved ✓');
+  goDash();
   showSync('Syncing...');
   for(const r of recs){const id=await saveToDB(r);if(id)r._id=id;}
   hideSync();
@@ -1008,13 +1013,15 @@ window.calcSp=function(){
 };
 window.saveSplit=async function(){
   const dt=document.getElementById('sp-dt').value,recs=[];
-  document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,am=getInputAmt(row.querySelector('.samt')),nt=row.querySelector('.snote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt});});
+  const _base=Date.now();let _i=0;
+  document.querySelectorAll('.sprow').forEach(row=>{const ct=row.querySelector('select').value,am=getInputAmt(row.querySelector('.samt')),nt=row.querySelector('.snote').value.trim();if(ct&&am>0)recs.push({date:dt,type:'Expense',account:'Cash',category:ct,subcategory:'',amount:am,note:nt,_ts:_base+(_i++)});});
   if(!recs.length){toast('No valid entries');return;}
   recs.forEach(r=>DB.unshift(r));
   try{localStorage.setItem('mm_db',JSON.stringify(DB));}catch(e){}
   renderDash();renderRecent();
   document.getElementById('sprows').innerHTML='';document.getElementById('sp-tot').value='';addSR();addSR();addSR();calcSp();
   toast(recs.length+' split entries saved ✓');
+  goDash();
   showSync('Syncing...');
   for(const r of recs){const id=await saveToDB(r);if(id)r._id=id;}
   hideSync();
@@ -1211,7 +1218,7 @@ function renderDash(){
         <span style="font-size:16px">&#x1F4C5;</span>
         <div>
           <div style="font-size:9px;font-weight:700;color:var(--g3);text-transform:uppercase;letter-spacing:.5px">Can spend/day</div>
-          <div style="font-size:15px;font-weight:700;color:var(--gn);font-variant-numeric:tabular-nums">${pkr(daysLeft>0?Math.round(mtdN/daysLeft):0)}</div>
+          <div style="font-size:15px;font-weight:700;color:${mtdN<0?'var(--rd)':'var(--gn)'};font-variant-numeric:tabular-nums">${mtdN<0?'('+pkr(mtdN)+')':pkr(daysLeft>0?Math.round(mtdN/daysLeft):0)}</div>
         </div>
       </div>
       <div style="font-size:11px;color:var(--g4);text-align:right">${daysLeft} days left &middot; ${pkr(mtdN)} remaining</div>
@@ -1588,7 +1595,7 @@ window.sync30Days = async function(){
       // Merge: keep old records before cutoff, replace recent ones from Firebase
       const old = DB.filter(r=>r.date < cutoff);
       DB = [...recent, ...old];
-      DB.sort((a,b)=>b.date.localeCompare(a.date));
+      DB.sort((a,b)=>{const dc=b.date.localeCompare(a.date);return dc!==0?dc:(b._ts||0)-(a._ts||0);});
       try{localStorage.setItem('mm_db', JSON.stringify(DB));}catch(e){}
       document.getElementById('rcount2').textContent = DB.length.toLocaleString()+' records';
       document.getElementById('lastsync').textContent = new Date().toLocaleTimeString();
